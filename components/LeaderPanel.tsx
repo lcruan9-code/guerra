@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
-import type { WarListsDTO } from '@/lib/types';
+import { CLASSE_COLOR } from '@/lib/brand';
+import type { Classe, WarListsDTO } from '@/lib/types';
 import WarLists from './WarLists';
 
 const POLL_MS = 8000;
@@ -52,41 +53,48 @@ export default function LeaderPanel({ eventId, locked, lists, onParticipationCha
   ) as [string, number][];
 
   return (
-    <section className="mt-4 rounded-2xl border border-amber-400/30 bg-slate-900 p-4">
-      <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-amber-300">Visão do líder</h2>
+    <section className="leader-panel">
+      <h2 className="leader-title">⚑ Visão do líder</h2>
 
       {summary.alerts.length > 0 && (
-        <div className="mb-3 flex flex-col gap-1">
+        <div className="alerts">
           {summary.alerts.map((a) => (
-            <p key={a} className="rounded-lg bg-red-950 px-3 py-2 text-sm text-red-300">
-              ⚠️ {a}
-            </p>
+            <p key={a} className="alert">⚠️ {a}</p>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 text-center">
-        {combos.map(([k, v]) => (
-          <div key={k} className="rounded-lg bg-slate-800 p-2">
-            <p className="text-xs text-slate-400">{k.replace('_', ' ')}</p>
-            <p className="text-lg font-bold">{v}</p>
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-center">
-        <div className="rounded-lg bg-slate-800 p-2">
-          <p className="text-xs text-slate-400">TOTAL FÍSICO</p>
-          <p className="text-lg font-bold">{summary.TOTAL_FISICO as number}</p>
+      {combos.length > 0 ? (
+        <div className="comp-grid">
+          {combos.map(([k, v]) => {
+            const cls = k.split('_')[0] as Classe;
+            const edge = CLASSE_COLOR[cls] ?? 'rgba(212,178,90,.4)';
+            return (
+              <div key={k} className="comp-cell" style={{ '--edge': edge } as React.CSSProperties}>
+                <div className="k">{k.replace('_', ' ')}</div>
+                <div className="v">{v}</div>
+              </div>
+            );
+          })}
         </div>
-        <div className="rounded-lg bg-slate-800 p-2">
-          <p className="text-xs text-slate-400">TOTAL MAGO</p>
-          <p className="text-lg font-bold">{summary.TOTAL_MAGO as number}</p>
+      ) : (
+        <p className="empty-hint">Nenhum confirmado ainda para compor.</p>
+      )}
+
+      <div className="totals">
+        <div className="total-cell">
+          <div className="k">Total Físico</div>
+          <div className="v">{summary.TOTAL_FISICO as number}</div>
+        </div>
+        <div className="total-cell">
+          <div className="k">Total Mago</div>
+          <div className="v">{summary.TOTAL_MAGO as number}</div>
         </div>
       </div>
 
       {locked && lists.vou.length > 0 && (
-        <div className="mt-4">
-          <h3 className="mb-2 text-sm font-semibold text-slate-300">Check de participação (+5 pts)</h3>
+        <div>
+          <h3 className="leader-check-h">Check de participação (+5 pts)</h3>
           <WarLists
             lists={{ vou: lists.vou, talvez: [], nao_vou: [] }}
             leaderMode

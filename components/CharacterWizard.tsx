@@ -1,13 +1,15 @@
 'use client';
 
+import Image from 'next/image';
 import CharacterForm from './CharacterForm';
 
 export default function CharacterWizard({ onDone }: { onDone: () => void }) {
   return (
-    <main className="mx-auto min-h-dvh max-w-md p-6">
-      <h1 className="text-2xl font-bold">Cadastre seu personagem</h1>
-      <p className="mb-6 mt-1 text-slate-400">Rapidinho: nome, classe e especialização.</p>
+    <div className="wizard">
+      <Image className="wizard-logo" src="/guild-logo.png" alt="Guild" width={92} height={92} />
+      <h1 className="wizard-title">Cadastre seu personagem</h1>
+      <p className="wizard-sub">Rapidinho: nome, classe e especialização.</p>
       <CharacterForm onSaved={onDone} />
-    </main>
+    </div>
   );
 }

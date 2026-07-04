@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 function fmt(msLeft: number): string {
-  if (msLeft <= 0) return 'AGORA';
+  if (msLeft <= 0) return 'EM ANDAMENTO';
   const s = Math.floor(msLeft / 1000);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -22,5 +22,6 @@ export default function Countdown({ targetIso }: { targetIso: string }) {
     return () => clearInterval(t);
   }, []);
 
-  return <span className="font-mono text-2xl font-bold text-amber-300">{fmt(new Date(targetIso).getTime() - now)}</span>;
+  const left = new Date(targetIso).getTime() - now;
+  return <span className={`countdown${left <= 0 ? ' live' : ''}`}>{fmt(left)}</span>;
 }

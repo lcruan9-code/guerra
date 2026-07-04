@@ -38,7 +38,7 @@ export default function GuerraApp() {
   }, [load]);
 
   if (state.kind === 'loading') {
-    return <main className="min-h-dvh flex items-center justify-center text-slate-400">Carregando…</main>;
+    return <div className="center-screen">Carregando…</div>;
   }
   if (state.kind === 'anon') return <LoginView loginFailed={loginFailed} />;
   if (state.data.characters.length === 0) {

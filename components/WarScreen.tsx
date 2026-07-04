@@ -1,8 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { TIPO_LABELS } from '@/lib/wyd';
+import { BRAND } from '@/lib/brand';
 import type { ConfirmStatus, WarListsDTO } from '@/lib/types';
 import type { CurrentData } from './GuerraApp';
 import Countdown from './Countdown';
@@ -66,59 +68,67 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
     timeZone: 'America/Sao_Paulo',
   });
 
-  const btn = (active: boolean, color: string) =>
-    `rounded-2xl py-5 text-lg font-bold active:scale-95 disabled:opacity-40 ${active ? color : 'bg-slate-800'}`;
-
   return (
-    <main className="mx-auto min-h-dvh max-w-md p-4 pb-16">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-slate-400">Olá, {user.nome}</p>
-          <p className="text-xs text-amber-300">{user.pontos} pontos</p>
+    <div className="app-wrap">
+      <header className="app-header">
+        <div className="brand">
+          <Image className="brand-logo" src="/guild-logo.png" alt={BRAND.guildName} width={46} height={46} />
+          <div>
+            <div className="brand-name">{BRAND.guildName}</div>
+            <div className="brand-sub">
+              GUERRA · <span className="reino">REINO {BRAND.reino}</span>
+            </div>
+          </div>
         </div>
-        <button onClick={() => setManaging(true)} className="rounded-lg bg-slate-800 px-3 py-2 text-sm">
-          Meus personagens
-        </button>
+        <div className="header-right">
+          <div className="user-name">{user.nome}</div>
+          <div className="user-points">{user.pontos} pontos</div>
+        </div>
       </header>
 
-      <section className="rounded-2xl bg-gradient-to-b from-slate-800 to-slate-900 p-5 text-center">
-        <h1 className="text-xl font-bold">{TIPO_LABELS[event.tipo]}</h1>
-        <p className="mt-1 text-sm capitalize text-slate-400">{dataLocal}</p>
-        <div className="mt-3">
-          <Countdown targetIso={event.dataIso} />
-        </div>
+      <section className="war-hero">
+        <div className="war-kicker">Próxima guerra</div>
+        <h1 className="war-title">{TIPO_LABELS[event.tipo]}</h1>
+        <div className="war-when">{dataLocal}</div>
+        <Countdown targetIso={event.dataIso} />
       </section>
 
       {event.locked ? (
-        <p className="mt-4 rounded-xl bg-slate-800 p-4 text-center text-slate-300">
-          ⚔️ Guerra em andamento — confirmações encerradas.
-        </p>
+        <p className="locked-banner">⚔️ Guerra em andamento — confirmações encerradas.</p>
       ) : (
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <button className={btn(myConfirmation?.status === 'VOU', 'bg-emerald-500 text-slate-950')} onClick={onVou}>
-            ✅ Vou
+        <div className="war-choices">
+          <button className={`choice-btn vou${myConfirmation?.status === 'VOU' ? ' on' : ''}`} onClick={onVou}>
+            <span className="ico">✅</span> Vou
           </button>
           <button
-            className={btn(myConfirmation?.status === 'NAO_VOU', 'bg-red-500 text-slate-950')}
+            className={`choice-btn nao${myConfirmation?.status === 'NAO_VOU' ? ' on' : ''}`}
             onClick={() => void send('NAO_VOU', null)}
           >
-            ❌ Não vou
+            <span className="ico">❌</span> Não vou
           </button>
           <button
-            className={btn(myConfirmation?.status === 'TALVEZ', 'bg-amber-400 text-slate-900')}
+            className={`choice-btn talvez${myConfirmation?.status === 'TALVEZ' ? ' on' : ''}`}
             onClick={() => void send('TALVEZ', null)}
           >
-            ⏳ Talvez
+            <span className="ico">⏳</span> Talvez
           </button>
         </div>
       )}
-      {error && <p className="mt-2 text-center text-sm text-red-400">{error}</p>}
+      {error && <p className="error-text" style={{ marginTop: 12, textAlign: 'center' }}>{error}</p>}
+
+      <div style={{ marginTop: 18 }}>
+        <button className="btn-ghost full" onClick={() => setManaging(true)}>
+          Meus personagens
+        </button>
+      </div>
 
       {user.role === 'ADMIN' && (
         <LeaderPanel eventId={event.id} locked={event.locked} lists={lists} onParticipationChanged={loadLists} />
       )}
 
-      <WarLists lists={lists} />
+      <div style={{ marginTop: 8 }}>
+        <WarLists lists={lists} />
+      </div>
 
       {picking && (
         <CharPicker
@@ -133,43 +143,45 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
       )}
 
       {managing && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950 p-6">
-          <h2 className="mb-4 text-xl font-bold">Meus personagens</h2>
-          {characters.map((c) => (
-            <div key={c.id} className="mb-6 rounded-xl bg-slate-900 p-4">
-              <CharacterForm
-                initial={c}
-                onSaved={() => {
-                  setManaging(false);
-                  void reload();
-                }}
-              />
-            </div>
-          ))}
-          {characters.length < 2 && (
-            <div className="mb-6 rounded-xl bg-slate-900 p-4">
-              <p className="mb-3 text-sm text-slate-400">Adicionar 2º personagem</p>
-              <CharacterForm
-                onSaved={() => {
-                  setManaging(false);
-                  void reload();
-                }}
-              />
-            </div>
-          )}
-          <button onClick={() => setManaging(false)} className="w-full rounded-xl bg-slate-800 py-3">
-            Fechar
-          </button>
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => void api('/api/auth/logout', { method: 'POST' }).then(() => window.location.reload())}
-              className="text-sm text-slate-500 underline"
-            >
-              Sair da conta
+        <div className="sheet-overlay" onClick={() => setManaging(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <h2 className="sheet-title">Meus personagens</h2>
+            {characters.map((c) => (
+              <div key={c.id} className="manage-block">
+                <CharacterForm
+                  initial={c}
+                  onSaved={() => {
+                    setManaging(false);
+                    void reload();
+                  }}
+                />
+              </div>
+            ))}
+            {characters.length < 2 && (
+              <div className="manage-block">
+                <div className="label">Adicionar 2º personagem</div>
+                <CharacterForm
+                  onSaved={() => {
+                    setManaging(false);
+                    void reload();
+                  }}
+                />
+              </div>
+            )}
+            <button onClick={() => setManaging(false)} className="btn-ghost full" style={{ marginTop: 4 }}>
+              Fechar
             </button>
+            <div style={{ marginTop: 18, textAlign: 'center' }}>
+              <button
+                onClick={() => void api('/api/auth/logout', { method: 'POST' }).then(() => window.location.reload())}
+                className="link-muted"
+              >
+                Sair da conta
+              </button>
+            </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

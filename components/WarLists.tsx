@@ -1,6 +1,7 @@
 'use client';
 
 import { SPEC_LABELS } from '@/lib/wyd';
+import { classeEdge } from '@/lib/brand';
 import type { ListEntry, WarListsDTO } from '@/lib/types';
 
 interface Props {
@@ -11,22 +12,22 @@ interface Props {
 }
 
 function Row({ e, leaderMode, locked, onParticipation }: { e: ListEntry } & Omit<Props, 'lists'>) {
+  const edge = classeEdge(e.classe);
   return (
-    <li className="flex items-center justify-between rounded-lg bg-slate-800/60 px-3 py-2">
-      <div>
-        <span className="font-medium">{e.nome}</span>
+    <li className="list-row" style={{ '--edge': edge } as React.CSSProperties}>
+      <div className="who">
+        <div className="nome">{e.nome}</div>
         {e.personagem && (
-          <span className="ml-2 text-sm text-slate-400">
-            {e.personagem} · {e.classe} {e.especializacao ? SPEC_LABELS[e.especializacao] : ''}
-          </span>
+          <div className="pj">
+            {e.personagem} · <span className="class-tag" style={{ color: edge }}>{e.classe}</span>{' '}
+            {e.especializacao ? SPEC_LABELS[e.especializacao] : ''}
+          </div>
         )}
       </div>
       {leaderMode && locked && onParticipation && (
         <button
           onClick={() => onParticipation(e.userId, !(e.participou ?? false))}
-          className={`rounded-lg px-3 py-1 text-sm font-semibold ${
-            e.participou ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'
-          }`}
+          className={`part-btn${e.participou ? ' on' : ''}`}
         >
           {e.participou ? '✔ Participou' : 'Marcar'}
         </button>
@@ -39,10 +40,11 @@ function Section({ title, entries, ...rest }: { title: string; entries: ListEntr
   if (entries.length === 0) return null;
   return (
     <section>
-      <h3 className="mb-2 mt-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
-        {title} ({entries.length})
+      <h3 className="section-h">
+        {title} <span className="count">({entries.length})</span>
+        <span className="rule" />
       </h3>
-      <ul className="flex flex-col gap-1">
+      <ul className="list">
         {entries.map((e) => (
           <Row key={e.userId} e={e} {...rest} />
         ))}
@@ -53,11 +55,13 @@ function Section({ title, entries, ...rest }: { title: string; entries: ListEntr
 
 export default function WarLists({ lists, leaderMode, locked, onParticipation }: Props) {
   const rest = { leaderMode, locked, onParticipation };
+  const total = lists.vou.length + lists.talvez.length + lists.nao_vou.length;
   return (
     <div>
       <Section title="✅ Confirmados" entries={lists.vou} {...rest} />
       <Section title="⏳ Talvez" entries={lists.talvez} {...rest} />
       <Section title="❌ Não vão" entries={lists.nao_vou} {...rest} />
+      {total === 0 && <p className="empty-hint">Ninguém respondeu ainda. Seja o primeiro!</p>}
     </div>
   );
 }

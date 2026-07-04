@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { CLASSES, SPECS_BY_CLASS, SPEC_LABELS } from '@/lib/wyd';
+import { CLASSE_COLOR } from '@/lib/brand';
 import type { CharacterDTO, Classe, Especializacao } from '@/lib/types';
 
 interface Props {
@@ -53,56 +54,60 @@ export default function CharacterForm({ initial, onSaved, onCancel }: Props) {
   const canSave = nome.trim().length >= 2 && !!classe && !!espec && !saving;
 
   return (
-    <div className="flex flex-col gap-4">
-      <input
-        value={nome}
-        onChange={(e) => setNome(e.target.value)}
-        placeholder="Nome do personagem"
-        maxLength={30}
-        className="rounded-xl bg-slate-800 px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-amber-400"
-      />
+    <div className="form-card">
       <div>
-        <p className="mb-2 text-sm text-slate-400">Classe</p>
-        <div className="grid grid-cols-4 gap-2">
+        <label className="field-label">Nome do personagem</label>
+        <input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Ex.: Kaorin"
+          maxLength={30}
+          className="field-input"
+        />
+      </div>
+
+      <div>
+        <label className="field-label">Classe</label>
+        <div className="pick-grid c4">
           {CLASSES.map((c) => (
             <button
               key={c}
               onClick={() => pickClasse(c)}
-              className={`rounded-xl py-3 text-lg font-bold ${classe === c ? 'bg-amber-400 text-slate-900' : 'bg-slate-800'}`}
+              className={`pick-btn cls${classe === c ? ' on' : ''}`}
+              style={
+                classe === c
+                  ? ({ '--clsbg': CLASSE_COLOR[c], '--clsedge': CLASSE_COLOR[c] } as React.CSSProperties)
+                  : undefined
+              }
             >
               {c}
             </button>
           ))}
         </div>
       </div>
+
       {classe && specs.length > 1 && (
         <div>
-          <p className="mb-2 text-sm text-slate-400">Especialização</p>
-          <div className="grid grid-cols-3 gap-2">
+          <label className="field-label">Especialização</label>
+          <div className="pick-grid c3">
             {specs.map((s) => (
-              <button
-                key={s}
-                onClick={() => setEspec(s)}
-                className={`rounded-xl py-3 font-semibold ${espec === s ? 'bg-amber-400 text-slate-900' : 'bg-slate-800'}`}
-              >
+              <button key={s} onClick={() => setEspec(s)} className={`pick-btn${espec === s ? ' on' : ''}`}>
                 {SPEC_LABELS[s]}
               </button>
             ))}
           </div>
         </div>
       )}
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      <div className="flex gap-2">
+
+      {error && <p className="error-text" style={{ marginBottom: 0 }}>{error}</p>}
+
+      <div className="form-actions">
         {onCancel && (
-          <button onClick={onCancel} className="flex-1 rounded-xl bg-slate-800 py-3">
+          <button onClick={onCancel} className="btn-cancel">
             Cancelar
           </button>
         )}
-        <button
-          onClick={save}
-          disabled={!canSave}
-          className="flex-1 rounded-xl bg-emerald-500 py-3 text-lg font-bold text-slate-950 disabled:opacity-40"
-        >
+        <button onClick={save} disabled={!canSave} className="btn-primary">
           {saving ? 'Salvando…' : 'Salvar'}
         </button>
       </div>
