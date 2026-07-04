@@ -12,6 +12,7 @@ export interface CurrentData {
   event: { id: string; tipo: WarTipo; dataIso: string; locked: boolean };
   myConfirmation: { status: ConfirmStatus; characterId: string | null } | null;
   characters: CharacterDTO[];
+  leaderUnlocked: boolean;
 }
 
 type State = { kind: 'loading' } | { kind: 'anon' } | { kind: 'ready'; data: CurrentData };

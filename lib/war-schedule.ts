@@ -30,14 +30,15 @@ export function warDateUtc(dia: string, time: string): Date {
   return new Date(`${dia}T${time}:00-03:00`);
 }
 
-export function computeNextWar(nowUtc: Date, times: WarTimes): NextWar {
+// A guerra "ativa" é a do DIA ATUAL (se houver), válida o dia inteiro — mesmo
+// depois do horário, para o líder registrar presença. Só vira na virada do dia
+// (meia-noite em São Paulo). Se hoje não tem guerra (sábado), pega a próxima.
+export function computeActiveWar(nowUtc: Date, times: WarTimes): NextWar {
   for (let i = 0; i < 8; i++) {
     const probe = new Date(nowUtc.getTime() + i * DAY_MS);
     const { dia, dow } = spCalendar(probe);
     const tipo = tipoDoDia(dow);
-    if (!tipo) continue;
-    const dataUtc = warDateUtc(dia, times[tipo]);
-    if (dataUtc.getTime() > nowUtc.getTime()) return { tipo, dia, dataUtc };
+    if (tipo) return { tipo, dia, dataUtc: warDateUtc(dia, times[tipo]) };
   }
-  throw new Error('Não foi possível calcular a próxima guerra.');
+  throw new Error('Não foi possível determinar a guerra ativa.');
 }

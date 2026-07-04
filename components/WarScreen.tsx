@@ -13,15 +13,17 @@ import WarLists from './WarLists';
 import CharacterForm from './CharacterForm';
 import LeaderPanel from './LeaderPanel';
 import RankingSheet from './RankingSheet';
+import LeaderUnlockCard from './LeaderUnlockCard';
 
 const POLL_MS = 8000;
 
 export default function WarScreen({ data, reload }: { data: CurrentData; reload: () => Promise<void> }) {
-  const { user, event, myConfirmation, characters } = data;
+  const { user, event, myConfirmation, characters, leaderUnlocked } = data;
   const [lists, setLists] = useState<WarListsDTO>({ vou: [], talvez: [], nao_vou: [] });
   const [picking, setPicking] = useState(false);
   const [managing, setManaging] = useState(false);
   const [ranking, setRanking] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadLists = useCallback(async () => {
@@ -122,17 +124,21 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
         <button className="btn-ghost accent" onClick={() => setRanking(true)}>
           🏆 Premiações
         </button>
-        {user.role === 'ADMIN' && (
+        {leaderUnlocked ? (
           <a className="btn-ghost" href="/admin">
             ⚙️ Painel
           </a>
+        ) : (
+          <button className="btn-ghost" onClick={() => setUnlocking(true)}>
+            🔒 Líder
+          </button>
         )}
         <button className="btn-ghost" onClick={() => setManaging(true)}>
           Personagens
         </button>
       </div>
 
-      {user.role === 'ADMIN' && (
+      {leaderUnlocked && (
         <LeaderPanel eventId={event.id} locked={event.locked} lists={lists} onParticipationChanged={loadLists} />
       )}
 
@@ -141,6 +147,19 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
       </div>
 
       {ranking && <RankingSheet onClose={() => setRanking(false)} />}
+
+      {unlocking && (
+        <div className="sheet-overlay" onClick={() => setUnlocking(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <LeaderUnlockCard
+              onDone={async () => {
+                setUnlocking(false);
+                await reload();
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {picking && (
         <CharPicker

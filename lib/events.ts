@@ -1,7 +1,9 @@
 import { queryOne, newId } from './db';
-import { computeNextWar } from './war-schedule';
+import { computeActiveWar } from './war-schedule';
 import { getWarTimes } from './settings';
 import type { WarTipo } from './types';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface EventRow {
   id: string;
@@ -10,32 +12,34 @@ export interface EventRow {
   cancelado?: boolean;
 }
 
-// Geração lazy: garante que a próxima guerra (não cancelada) existe. Idempotente
-// e à prova de concorrência via UNIQUE(dia) + ON CONFLICT DO NOTHING. Se o dia
-// calculado estiver cancelado pelo admin, avança para a guerra seguinte.
+// Geração lazy: garante que a guerra ATIVA do dia existe (vale o dia inteiro,
+// reseta na virada em SP). Idempotente e à prova de concorrência via UNIQUE(dia)
+// + ON CONFLICT DO NOTHING. Se o dia estiver cancelado pelo admin, pula para o
+// próximo dia com guerra.
 export async function ensureNextEvent(now: Date = new Date()): Promise<EventRow> {
   const times = await getWarTimes();
   let cursor = now;
   for (let guard = 0; guard < 12; guard++) {
-    const next = computeNextWar(cursor, times);
+    const active = computeActiveWar(cursor, times);
     const existing = await queryOne<EventRow>(
       'SELECT id, tipo, data, cancelado FROM events WHERE dia = $1',
-      [next.dia],
+      [active.dia],
     );
     if (existing?.cancelado) {
-      cursor = new Date(next.dataUtc.getTime() + 1000); // pula a guerra cancelada
+      // pula para o início (00:00 SP) do dia seguinte e recalcula
+      cursor = new Date(Date.parse(`${active.dia}T00:00:00-03:00`) + DAY_MS);
       continue;
     }
     if (existing) return existing;
     await queryOne(
       `INSERT INTO events (id, tipo, data, dia) VALUES ($1, $2, $3, $4)
        ON CONFLICT (dia) DO NOTHING`,
-      [newId(), next.tipo, next.dataUtc.toISOString(), next.dia],
+      [newId(), active.tipo, active.dataUtc.toISOString(), active.dia],
     );
-    const row = await queryOne<EventRow>('SELECT id, tipo, data, cancelado FROM events WHERE dia = $1', [next.dia]);
+    const row = await queryOne<EventRow>('SELECT id, tipo, data, cancelado FROM events WHERE dia = $1', [active.dia]);
     if (row) return row;
   }
-  throw new Error('Não foi possível determinar a próxima guerra.');
+  throw new Error('Não foi possível determinar a guerra ativa.');
 }
 
 export async function getEvent(id: string): Promise<EventRow | null> {

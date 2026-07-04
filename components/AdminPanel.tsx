@@ -4,19 +4,23 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { TIPO_LABELS } from '@/lib/wyd';
 import type { AdminOverviewDTO, AwardDTO, RosterEntryDTO } from '@/lib/admin-types';
+import LeaderUnlockCard from './LeaderUnlockCard';
 
 type Tab = 'guerra' | 'premios' | 'jogadores';
+type Gate = 'loading' | 'locked' | 'nologin' | 'ok';
 
 export default function AdminPanel() {
   const [data, setData] = useState<AdminOverviewDTO | null>(null);
-  const [denied, setDenied] = useState(false);
+  const [gate, setGate] = useState<Gate>('loading');
   const [tab, setTab] = useState<Tab>('guerra');
 
   const load = useCallback(async () => {
     try {
       setData(await api<AdminOverviewDTO>('/api/admin/overview'));
+      setGate('ok');
     } catch (e) {
-      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) setDenied(true);
+      if (e instanceof ApiError && e.status === 403) setGate('locked');
+      else setGate('nologin');
     }
   }, []);
 
@@ -24,14 +28,29 @@ export default function AdminPanel() {
     void load();
   }, [load]);
 
-  if (denied) {
+  if (gate === 'loading') return <div className="center-screen">Carregando painel…</div>;
+
+  if (gate === 'nologin') {
     return (
       <div className="center-screen" style={{ flexDirection: 'column', gap: 12 }}>
-        <p>Acesso restrito ao líder.</p>
+        <p>Faça login para acessar o painel.</p>
         <a href="/" className="btn-ghost">Voltar</a>
       </div>
     );
   }
+
+  if (gate === 'locked') {
+    return (
+      <div className="admin-wrap">
+        <header className="admin-top">
+          <div className="admin-title">⚙️ Painel do Líder</div>
+          <a href="/" className="btn-ghost">Voltar</a>
+        </header>
+        <LeaderUnlockCard onDone={load} />
+      </div>
+    );
+  }
+
   if (!data) return <div className="center-screen">Carregando painel…</div>;
 
   return (
@@ -140,7 +159,43 @@ function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Pro
       </section>
 
       <RosterCard data={data} reload={reload} />
+      <SenhaCard />
     </>
+  );
+}
+
+/* ---------------- SENHA DO LÍDER ---------------- */
+function SenhaCard() {
+  const [nova, setNova] = useState('');
+  const [hint, setHint] = useState('');
+
+  async function save() {
+    setHint('');
+    try {
+      await api('/api/leader/password', { method: 'POST', body: JSON.stringify({ nova }) });
+      setNova('');
+      setHint('Senha alterada. Os outros dispositivos precisarão entrar de novo.');
+    } catch (e) {
+      setHint(e instanceof ApiError ? e.message : 'Erro ao salvar.');
+    }
+  }
+
+  return (
+    <section className="admin-card">
+      <h2>Senha do líder</h2>
+      <label className="mini-label">Nova senha (mín. 4 caracteres)</label>
+      <input
+        className="field-input"
+        type="text"
+        value={nova}
+        onChange={(e) => setNova(e.target.value)}
+        placeholder="Nova senha do líder"
+      />
+      <div className="save-hint">{hint}</div>
+      <button className="btn-primary" disabled={nova.trim().length < 4} onClick={save}>
+        Alterar senha
+      </button>
+    </section>
   );
 }
 
