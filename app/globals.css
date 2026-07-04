@@ -204,3 +204,71 @@ input::placeholder { color: #6b6253; }
 .char-opt .meta { font-size: 13px; color: var(--muted); }
 .manage-block { margin-bottom: 18px; }
 .manage-block .label { font-size: 12px; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; }
+
+/* ---------------- NAV BUTTONS ---------------- */
+.nav-row { display: flex; gap: 10px; margin-top: 18px; }
+.nav-row .btn-ghost { flex: 1; justify-content: center; }
+.nav-row .btn-ghost.accent { color: var(--accent); border-color: rgba(255, 122, 46, .4); background: rgba(255, 122, 46, .09); }
+
+/* ---------------- ADMIN ---------------- */
+.admin-wrap { max-width: 640px; margin: 0 auto; padding: 0 16px 64px; }
+.admin-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; border-bottom: 1px solid rgba(212, 178, 90, .16); margin-bottom: 22px; }
+.admin-title { font-family: var(--font-cinzel), serif; font-size: 20px; letter-spacing: .08em; color: #f0e6d2; }
+.admin-card { background: linear-gradient(180deg, rgba(26, 20, 16, .92), rgba(16, 12, 9, .96)); border: 1px solid rgba(212, 178, 90, .18); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+.admin-card h2 { font-family: var(--font-cinzel), serif; font-size: 14px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mini-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; display: block; }
+.save-hint { font-size: 12px; color: #7fd18f; margin-top: 8px; min-height: 16px; }
+
+/* award cards */
+.award-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .award-grid { grid-template-columns: 1fr; } .row-2 { grid-template-columns: 1fr; } }
+.award-box { border-radius: 10px; padding: 14px; border: 1px solid rgba(212, 178, 90, .18); background: rgba(0, 0, 0, .22); transition: border-color .15s ease, opacity .15s ease; }
+.award-box.on { border-color: rgba(255, 122, 46, .5); background: rgba(255, 122, 46, .06); }
+.award-box.off { opacity: .6; }
+.award-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.award-name { font-weight: 700; font-size: 14px; color: #f0e6d2; }
+
+/* toggle switch */
+.switch { position: relative; width: 44px; height: 24px; flex: 0 0 auto; cursor: pointer; }
+.switch input { display: none; }
+.switch .track { position: absolute; inset: 0; border-radius: 999px; background: #3a3128; transition: background .15s ease; }
+.switch .thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #cdbf9e; transition: transform .15s ease; }
+.switch input:checked + .track { background: linear-gradient(180deg, #ffb347, #f2591a); }
+.switch input:checked + .track + .thumb { transform: translateX(20px); background: #1f0a02; }
+
+/* tables */
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th { text-align: left; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid rgba(212, 178, 90, .16); }
+.tbl td { padding: 8px; border-bottom: 1px solid rgba(212, 178, 90, .08); color: #d8cdb8; }
+.tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl .nome { font-weight: 600; color: #f0e6d2; }
+.tbl tr.me { background: rgba(255, 122, 46, .08); }
+.pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em; padding: 2px 7px; border-radius: 4px; }
+.pill.vou { background: rgba(90, 168, 106, .16); color: #7fd18f; }
+.pill.talvez { background: rgba(255, 122, 46, .16); color: #ffb877; }
+.pill.nao { background: rgba(214, 51, 46, .16); color: #ff9a8a; }
+.pill.admin { background: rgba(255, 122, 46, .16); color: #ffb877; }
+
+.stat-input { width: 64px; background: #0e0b08; border: 1px solid rgba(212, 178, 90, .25); color: var(--text); padding: 6px 8px; border-radius: 5px; font-size: 14px; text-align: right; }
+.check-cell { cursor: pointer; }
+
+.tab-row { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid rgba(212, 178, 90, .16); overflow-x: auto; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 12px; font-family: var(--font-cinzel), serif; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }
+.tab-btn.active { color: #f0e6d2; border-bottom-color: var(--accent); }
+
+/* ranking sheet */
+.rank-week { text-align: center; color: var(--muted); font-size: 12px; letter-spacing: .06em; margin-bottom: 14px; }
+.rank-prize-banner { background: linear-gradient(180deg, rgba(255,122,46,.14), rgba(0,0,0,.2)); border: 1px solid rgba(255,122,46,.3); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; color: #ffd9a8; font-size: 14px; }
+.rank-award { margin-bottom: 18px; }
+.rank-award-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.rank-award-title { font-family: var(--font-cinzel), serif; font-size: 14px; letter-spacing: .06em; color: var(--gold); }
+.rank-award-prize { font-size: 12px; color: #cdbf9e; }
+.rank-line { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(0, 0, 0, .25); border: 1px solid rgba(212, 178, 90, .1); margin-bottom: 6px; }
+.rank-pos { font-family: var(--font-cinzel), serif; font-weight: 700; color: var(--accent); width: 26px; }
+.rank-pos.top1 { color: #ffd24a; }
+.rank-line .nome { flex: 1; font-weight: 600; color: #f0e6d2; }
+.rank-line .val { font-variant-numeric: tabular-nums; color: var(--gold); font-weight: 700; }
+.rank-me { text-align: center; margin-top: 4px; padding: 14px; border-radius: 10px; background: rgba(255, 122, 46, .08); border: 1px solid rgba(255, 122, 46, .25); }
+.rank-me .big { font-family: var(--font-cinzel), serif; font-size: 26px; font-weight: 800; color: var(--accent-bright); }
+.rank-me .lbl { font-size: 12px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }

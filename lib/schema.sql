@@ -46,5 +46,30 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 
+-- Prêmios da semana: 4 tipos fixos, cada um com liga/desliga + texto do prêmio.
+CREATE TABLE IF NOT EXISTS awards (
+  key    TEXT PRIMARY KEY,
+  label  TEXT NOT NULL,
+  ativo  BOOLEAN NOT NULL DEFAULT false,
+  premio TEXT NOT NULL DEFAULT '',
+  ordem  INT NOT NULL DEFAULT 0
+);
+
+-- Migrações idempotentes p/ bancos já existentes:
+-- KS e Kefra lançados pelo admin por participação em guerra.
+ALTER TABLE confirmations ADD COLUMN IF NOT EXISTS ks    INT NOT NULL DEFAULT 0;
+ALTER TABLE confirmations ADD COLUMN IF NOT EXISTS kefra INT NOT NULL DEFAULT 0;
+-- Cancelamento de uma guerra específica (a geração lazy pula a cancelada).
+ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelado BOOLEAN NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS idx_confirmations_event ON confirmations(event_id);
 CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id);
+CREATE INDEX IF NOT EXISTS idx_events_dia ON events(dia);
+
+-- Seed dos 4 tipos de prêmio (idempotente; só o admin liga/edita o texto).
+INSERT INTO awards (key, label, ordem) VALUES
+  ('PONTOS',       'Pontuação da semana',      1),
+  ('KS_TORRE',     'Top KS na Torre',          2),
+  ('KEFRA',        'Top Kefra',                3),
+  ('PARTICIPACAO', 'Presença nas guerras',     4)
+ON CONFLICT (key) DO NOTHING;
