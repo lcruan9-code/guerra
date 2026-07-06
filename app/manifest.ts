@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Guerra — Presença da Guild',
-    short_name: 'Guerra',
+    name: 'Imperium Guerra',
+    short_name: 'Imperium Guerra',
     description: 'Confirmação de presença nas guerras da guild (WYD)',
     start_url: '/',
     display: 'standalone',

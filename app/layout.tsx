@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'Guerra',
+    title: 'Imperium Guerra',
     statusBarStyle: 'black-translucent',
   },
   icons: {
