@@ -306,10 +306,10 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
                 <tr>
                   <th>Jogador</th>
                   {view.wars.map((w) => (
-                    <th key={`f-${w.id}`}>Foi {w.tipo === 'KEFRA' ? 'Kefra' : 'Torre'}?</th>
+                    <th key={`f-${w.id}`}>Foi {w.tipo === 'KEFRA' ? 'Kef' : 'Torre'}?</th>
                   ))}
                   {view.wars.map((w) => (
-                    <th key={`k-${w.id}`}>{w.ksLabel}</th>
+                    <th key={`k-${w.id}`}>{w.tipo === 'KEFRA' ? 'KS Kef' : 'KS'}</th>
                   ))}
                 </tr>
               </thead>
@@ -345,13 +345,12 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
                       const ks = cell.ks;
                       if (w.ksCap === 1) {
                         return (
-                          <td key={`k-${w.id}`}>
-                            <button
-                              className={`ks-radio${ks > 0 ? ' on' : ''}`}
-                              onClick={() => changeKs(w.id, r.userId, ks > 0 ? 0 : 1)}
-                            >
-                              {ks > 0 ? '★' : 'marcar'}
-                            </button>
+                          <td
+                            key={`k-${w.id}`}
+                            className="check-cell"
+                            onClick={() => changeKs(w.id, r.userId, ks > 0 ? 0 : 1)}
+                          >
+                            <span className={`pill ${ks > 0 ? 'vou' : 'nao'}`}>{ks > 0 ? '✔' : '—'}</span>
                           </td>
                         );
                       }
