@@ -19,9 +19,23 @@ const rajdhani = Rajdhani({
 export const metadata: Metadata = {
   title: 'Guerra — Presença da Guild',
   description: 'Confirmação de presença nas guerras da guild (WYD)',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'Guerra',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-180.png',
+  },
 };
 
-export const viewport: Viewport = { width: 'device-width', initialScale: 1 };
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0a0705',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
