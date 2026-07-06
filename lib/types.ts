@@ -1,7 +1,7 @@
 export type Role = 'ADMIN' | 'MEMBRO';
 export type Classe = 'TK' | 'BM' | 'HT' | 'FM';
 export type Especializacao = 'FISICO' | 'MAGO' | 'CANCEL' | 'BLOOD';
-export type WarTipo = 'TORRE' | 'NOATUM';
+export type WarTipo = 'TORRE' | 'KEFRA';
 export type ConfirmStatus = 'VOU' | 'NAO_VOU' | 'TALVEZ';
 
 export interface SessionUser {

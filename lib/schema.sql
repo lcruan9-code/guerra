@@ -25,9 +25,9 @@ CREATE TABLE IF NOT EXISTS characters (
 
 CREATE TABLE IF NOT EXISTS events (
   id   TEXT PRIMARY KEY,
-  tipo TEXT NOT NULL CHECK (tipo IN ('TORRE','NOATUM')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('TORRE','KEFRA','NOATUM')),
   data TIMESTAMPTZ NOT NULL,
-  dia  DATE NOT NULL UNIQUE
+  dia  DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS confirmations (
@@ -61,8 +61,13 @@ ALTER TABLE confirmations ADD COLUMN IF NOT EXISTS ks    INT NOT NULL DEFAULT 0;
 ALTER TABLE confirmations ADD COLUMN IF NOT EXISTS kefra INT NOT NULL DEFAULT 0;
 -- Cancelamento de uma guerra específica (a geração lazy pula a cancelada).
 ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelado BOOLEAN NOT NULL DEFAULT false;
--- Quem deu o KS da guerra (1 por guerra). Torre → ranking KS Torre; Noatum → Kefra.
+-- Quem deu o KS da guerra (coluna órfã de uma abordagem antiga; mantida por compat).
 ALTER TABLE events ADD COLUMN IF NOT EXISTS ks_user_id TEXT REFERENCES users(id) ON DELETE SET NULL;
+-- Mais de uma guerra por dia (Torre + Kefra na terça): chave passa a ser (dia, tipo).
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_dia_key;
+ALTER TABLE events DROP CONSTRAINT IF EXISTS events_tipo_check;
+ALTER TABLE events ADD CONSTRAINT events_tipo_check CHECK (tipo IN ('TORRE','KEFRA','NOATUM'));
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_events_dia_tipo ON events(dia, tipo);
 
 CREATE INDEX IF NOT EXISTS idx_confirmations_event ON confirmations(event_id);
 CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id);

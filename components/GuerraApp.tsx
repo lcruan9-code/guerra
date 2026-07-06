@@ -7,12 +7,19 @@ import LoginView from './LoginView';
 import CharacterWizard from './CharacterWizard';
 import WarScreen from './WarScreen';
 
+export interface WarDTO {
+  id: string;
+  tipo: WarTipo;
+  dataIso: string;
+  locked: boolean;
+  myConfirmation: { status: ConfirmStatus; characterId: string | null } | null;
+}
+
 export interface CurrentData {
   user: { nome: string; role: Role; pontos: number };
-  event: { id: string; tipo: WarTipo; dataIso: string; locked: boolean };
-  myConfirmation: { status: ConfirmStatus; characterId: string | null } | null;
   characters: CharacterDTO[];
   leaderUnlocked: boolean;
+  wars: WarDTO[];
 }
 
 type State = { kind: 'loading' } | { kind: 'anon' } | { kind: 'ready'; data: CurrentData };

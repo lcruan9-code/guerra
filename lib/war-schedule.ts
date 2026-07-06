@@ -6,13 +6,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface WarTimes {
   TORRE: string; // "HH:MM"
-  NOATUM: string;
+  KEFRA: string;
 }
 
-export interface NextWar {
+export interface DayWar {
   tipo: WarTipo;
   dia: string; // YYYY-MM-DD no calendário de São Paulo
   dataUtc: Date;
+}
+
+export interface ActiveDay {
+  dia: string;
+  wars: DayWar[];
 }
 
 function spCalendar(instantUtc: Date): { dia: string; dow: number } {
@@ -20,25 +25,27 @@ function spCalendar(instantUtc: Date): { dia: string; dow: number } {
   return { dia: shifted.toISOString().slice(0, 10), dow: shifted.getUTCDay() };
 }
 
-function tipoDoDia(dow: number): WarTipo | null {
-  if (dow >= 1 && dow <= 5) return 'TORRE'; // seg–sex
-  if (dow === 0) return 'NOATUM'; // domingo
-  return null; // sábado
+// Guerras de um dia da semana (dow: 0=dom..6=sáb).
+// Torre: seg–sex. Kefra: terça (dow=2), junto da Torre. Sábado/domingo: nada.
+export function warsOfDow(dow: number): WarTipo[] {
+  if (dow < 1 || dow > 5) return [];
+  return dow === 2 ? ['TORRE', 'KEFRA'] : ['TORRE'];
 }
 
 export function warDateUtc(dia: string, time: string): Date {
   return new Date(`${dia}T${time}:00-03:00`);
 }
 
-// A guerra "ativa" é a do DIA ATUAL (se houver), válida o dia inteiro — mesmo
-// depois do horário, para o líder registrar presença. Só vira na virada do dia
-// (meia-noite em São Paulo). Se hoje não tem guerra (sábado), pega a próxima.
-export function computeActiveWar(nowUtc: Date, times: WarTimes): NextWar {
+// Dia ativo = hoje (se tiver guerra), válido o dia inteiro; senão o próximo dia
+// com guerra. Retorna todas as guerras do dia (na terça, Torre + Kefra).
+export function activeDayWars(nowUtc: Date, times: WarTimes): ActiveDay {
   for (let i = 0; i < 8; i++) {
     const probe = new Date(nowUtc.getTime() + i * DAY_MS);
     const { dia, dow } = spCalendar(probe);
-    const tipo = tipoDoDia(dow);
-    if (tipo) return { tipo, dia, dataUtc: warDateUtc(dia, times[tipo]) };
+    const tipos = warsOfDow(dow);
+    if (tipos.length) {
+      return { dia, wars: tipos.map((tipo) => ({ tipo, dia, dataUtc: warDateUtc(dia, times[tipo]) })) };
+    }
   }
   throw new Error('Não foi possível determinar a guerra ativa.');
 }

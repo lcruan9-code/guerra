@@ -10,7 +10,7 @@ const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 function warLabel(ev: { dia: string; tipo: string }): string {
   const [y, m, d] = ev.dia.split('-').map(Number);
   const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  const tipo = ev.tipo === 'NOATUM' ? 'Noatum' : 'Torre';
+  const tipo = ev.tipo === 'KEFRA' ? 'Kefra' : 'Torre';
   return `${DIAS[dow]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')} · ${tipo}`;
 }
 
@@ -96,13 +96,13 @@ export default function AdminPanel() {
 /* ---------------- GUERRA ---------------- */
 function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Promise<void> }) {
   const [torre, setTorre] = useState(data.warTimes.TORRE);
-  const [noatum, setNoatum] = useState(data.warTimes.NOATUM);
+  const [kefra, setKefra] = useState(data.warTimes.KEFRA);
   const [hint, setHint] = useState('');
 
   async function saveTimes() {
     setHint('');
     try {
-      await api('/api/admin/war-times', { method: 'POST', body: JSON.stringify({ torre, noatum }) });
+      await api('/api/admin/war-times', { method: 'POST', body: JSON.stringify({ torre, kefra }) });
       setHint('Horários salvos.');
       await reload();
     } catch (e) {
@@ -142,8 +142,8 @@ function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Pro
             <input className="field-input" type="time" value={torre} onChange={(e) => setTorre(e.target.value)} />
           </div>
           <div>
-            <label className="mini-label">Noatum (Dom)</label>
-            <input className="field-input" type="time" value={noatum} onChange={(e) => setNoatum(e.target.value)} />
+            <label className="mini-label">Kefra (Ter)</label>
+            <input className="field-input" type="time" value={kefra} onChange={(e) => setKefra(e.target.value)} />
           </div>
         </div>
         <div className="save-hint">{hint}</div>
@@ -152,7 +152,7 @@ function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Pro
 
       <section className="admin-card">
         <h2>Próxima guerra</h2>
-        <p style={{ fontWeight: 700, color: '#f0e6d2' }}>{TIPO_LABELS[ev.tipo as 'TORRE' | 'NOATUM']}</p>
+        <p style={{ fontWeight: 700, color: '#f0e6d2' }}>{TIPO_LABELS[ev.tipo as 'TORRE' | 'KEFRA']}</p>
         <p style={{ textTransform: 'capitalize', color: '#a89c87', fontSize: 14, marginTop: 2 }}>{quando}</p>
         {ev.cancelado && <p className="pill nao" style={{ marginTop: 8 }}>CANCELADA</p>}
 

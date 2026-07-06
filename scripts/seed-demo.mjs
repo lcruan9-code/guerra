@@ -47,10 +47,13 @@ const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 
 // limpa dados demo anteriores (identificados por google_sub demo-*)
+// Fase de teste: zera confirmações e eventos (recria do zero com o novo calendário).
+await client.query('DELETE FROM confirmations');
+await client.query('DELETE FROM events');
+
 const { rows: oldUsers } = await client.query("SELECT id FROM users WHERE google_sub LIKE 'demo-%'");
 const oldIds = oldUsers.map((r) => r.id);
 if (oldIds.length) {
-  await client.query('DELETE FROM confirmations WHERE user_id = ANY($1)', [oldIds]);
   await client.query('DELETE FROM characters WHERE user_id = ANY($1)', [oldIds]);
   await client.query('DELETE FROM users WHERE id = ANY($1)', [oldIds]);
 }
@@ -88,17 +91,14 @@ const events = [];
 for (let i = 0; i < 7; i++) {
   const dia = addDays(monday, i);
   const dow = dowOf(dia);
-  const tipo = dow === 0 ? 'NOATUM' : dow === 6 ? null : 'TORRE'; // sáb sem guerra
-  if (!tipo) continue;
-  const id = randomUUID();
-  await client.query(
-    `INSERT INTO events (id, tipo, data, dia) VALUES ($1,$2,$3,$4)
-     ON CONFLICT (dia) DO UPDATE SET tipo = EXCLUDED.tipo, data = EXCLUDED.data
-     RETURNING id`,
-    [id, tipo, warAt(dia), dia],
-  );
-  const { rows } = await client.query('SELECT id FROM events WHERE dia = $1', [dia]);
-  events.push({ id: rows[0].id, dia, tipo, past: dia < hoje, today: dia === hoje });
+  if (dow < 1 || dow > 5) continue; // sáb/dom sem guerra
+  const tipos = dow === 2 ? ['TORRE', 'KEFRA'] : ['TORRE']; // terça tem Kefra também
+  for (const tipo of tipos) {
+    const id = randomUUID();
+    const hora = tipo === 'KEFRA' ? '20:00' : '21:00';
+    await client.query(`INSERT INTO events (id, tipo, data, dia) VALUES ($1,$2,$3,$4)`, [id, tipo, warAt(dia, hora), dia]);
+    events.push({ id, dia, tipo, past: dia < hoje, today: dia === hoje });
+  }
 }
 
 // ---- confirmações + KS/Kefra ----

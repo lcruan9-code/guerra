@@ -1,77 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
-import { api, ApiError } from '@/lib/api-client';
-import { TIPO_LABELS } from '@/lib/wyd';
+import { api } from '@/lib/api-client';
 import { BRAND } from '@/lib/brand';
-import type { ConfirmStatus, WarListsDTO } from '@/lib/types';
 import type { CurrentData } from './GuerraApp';
-import Countdown from './Countdown';
-import CharPicker from './CharPicker';
-import WarLists from './WarLists';
 import CharacterForm from './CharacterForm';
-import LeaderPanel from './LeaderPanel';
 import RankingSheet from './RankingSheet';
 import LeaderUnlockCard from './LeaderUnlockCard';
-
-const POLL_MS = 8000;
+import WarBlock from './WarBlock';
 
 export default function WarScreen({ data, reload }: { data: CurrentData; reload: () => Promise<void> }) {
-  const { user, event, myConfirmation, characters, leaderUnlocked } = data;
-  const [lists, setLists] = useState<WarListsDTO>({ vou: [], talvez: [], nao_vou: [] });
-  const [picking, setPicking] = useState(false);
+  const { user, characters, leaderUnlocked, wars } = data;
   const [managing, setManaging] = useState(false);
   const [ranking, setRanking] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadLists = useCallback(async () => {
-    try {
-      setLists(await api<WarListsDTO>(`/api/war/${event.id}/list`));
-    } catch {
-      // polling: falha silenciosa, próxima rodada tenta de novo
-    }
-  }, [event.id]);
-
-  useEffect(() => {
-    void loadLists();
-    const t = setInterval(() => void loadLists(), POLL_MS);
-    return () => clearInterval(t);
-  }, [loadLists]);
-
-  async function send(status: ConfirmStatus, characterId: string | null) {
-    setError(null);
-    try {
-      await api(`/api/war/${event.id}/confirm`, {
-        method: 'POST',
-        body: JSON.stringify({ status, characterId }),
-      });
-      await Promise.all([reload(), loadLists()]);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Erro ao confirmar.');
-    }
-  }
-
-  function onVou() {
-    if (characters.length === 1) {
-      void send('VOU', characters[0].id);
-      return;
-    }
-    setPicking(true);
-  }
-
-  const preselected = myConfirmation?.characterId ?? characters.find((c) => c.principal)?.id ?? null;
-
-  const dataLocal = new Date(event.dataIso).toLocaleString('pt-BR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Sao_Paulo',
-  });
 
   return (
     <div className="app-wrap">
@@ -112,67 +56,33 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
         </button>
       </div>
 
-      <section className="war-hero">
-        <div className="war-kicker">Próxima guerra</div>
-        <h1 className="war-title">{TIPO_LABELS[event.tipo]}</h1>
-        <div className="war-when">{dataLocal}</div>
-        <Countdown targetIso={event.dataIso} />
-      </section>
-
-      {event.locked ? (
-        <p className="locked-banner">⚔️ Guerra em andamento — confirmações encerradas.</p>
-      ) : (
-        <div className="war-choices">
-          <button className={`choice-btn vou${myConfirmation?.status === 'VOU' ? ' on' : ''}`} onClick={onVou}>
-            <span className="ico">✅</span> Vou
-          </button>
-          <button
-            className={`choice-btn nao${myConfirmation?.status === 'NAO_VOU' ? ' on' : ''}`}
-            onClick={() => void send('NAO_VOU', null)}
-          >
-            <span className="ico">❌</span> Não vou
-          </button>
-          <button
-            className={`choice-btn talvez${myConfirmation?.status === 'TALVEZ' ? ' on' : ''}`}
-            onClick={() => void send('TALVEZ', null)}
-          >
-            <span className="ico">⏳</span> Talvez
-          </button>
-        </div>
-      )}
-      {error && <p className="error-text" style={{ marginTop: 12, textAlign: 'center' }}>{error}</p>}
-
-      {leaderUnlocked && (
-        <LeaderPanel eventId={event.id} locked={event.locked} lists={lists} onParticipationChanged={loadLists} />
+      {wars.length > 1 && (
+        <p className="day-note">Hoje tem {wars.length} guerras — confirme cada uma.</p>
       )}
 
-      <div style={{ marginTop: 8 }}>
-        <WarLists lists={lists} />
-      </div>
+      {wars.map((war) => (
+        <WarBlock
+          key={war.id}
+          war={war}
+          characters={characters}
+          leaderUnlocked={leaderUnlocked}
+          reloadCurrent={reload}
+        />
+      ))}
 
       {menuOpen && (
         <div className="sheet-overlay" onClick={() => setMenuOpen(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <div className="menu-head">
               <div className="menu-name">{user.nome}</div>
-              <div className="menu-points">{user.pontos} pontos{user.role === 'ADMIN' ? ' · líder' : ''}</div>
+              <div className="menu-points">
+                {user.pontos} pontos{user.role === 'ADMIN' ? ' · líder' : ''}
+              </div>
             </div>
-            <button
-              className="menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                setManaging(true);
-              }}
-            >
+            <button className="menu-item" onClick={() => { setMenuOpen(false); setManaging(true); }}>
               🧙 Meus personagens
             </button>
-            <button
-              className="menu-item"
-              onClick={() => {
-                setMenuOpen(false);
-                setRanking(true);
-              }}
-            >
+            <button className="menu-item" onClick={() => { setMenuOpen(false); setRanking(true); }}>
               🏆 Premiações & ranking
             </button>
             <a className="menu-item" href="/api/auth/google">
@@ -206,42 +116,19 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
         </div>
       )}
 
-      {picking && (
-        <CharPicker
-          characters={characters}
-          preselectedId={preselected}
-          onPick={(id) => {
-            setPicking(false);
-            void send('VOU', id);
-          }}
-          onClose={() => setPicking(false)}
-        />
-      )}
-
       {managing && (
         <div className="sheet-overlay" onClick={() => setManaging(false)}>
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <h2 className="sheet-title">Meus personagens</h2>
             {characters.map((c) => (
               <div key={c.id} className="manage-block">
-                <CharacterForm
-                  initial={c}
-                  onSaved={() => {
-                    setManaging(false);
-                    void reload();
-                  }}
-                />
+                <CharacterForm initial={c} onSaved={() => { setManaging(false); void reload(); }} />
               </div>
             ))}
             {characters.length < 2 && (
               <div className="manage-block">
                 <div className="label">Adicionar 2º personagem</div>
-                <CharacterForm
-                  onSaved={() => {
-                    setManaging(false);
-                    void reload();
-                  }}
-                />
+                <CharacterForm onSaved={() => { setManaging(false); void reload(); }} />
               </div>
             )}
             <button onClick={() => setManaging(false)} className="btn-ghost full" style={{ marginTop: 4 }}>

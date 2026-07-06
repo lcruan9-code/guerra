@@ -20,7 +20,7 @@ export interface AwardRow {
 export async function rankBy(key: AwardKey, week: WeekRange, limit = 20): Promise<RankEntry[]> {
   // KS Torre (soma de KS nas Torres) e Kefra (KS na Noatum) — de confirmations.ks.
   if (key === 'KS_TORRE' || key === 'KEFRA') {
-    const tipo = key === 'KS_TORRE' ? 'TORRE' : 'NOATUM';
+    const tipo = key === 'KS_TORRE' ? 'TORRE' : 'KEFRA';
     return query<RankEntry>(
       `SELECT u.id AS "userId", u.nome, COALESCE(SUM(c.ks), 0)::int AS valor
        FROM users u

@@ -18,7 +18,7 @@ export const SPEC_LABELS: Record<Especializacao, string> = {
 
 export const TIPO_LABELS: Record<WarTipo, string> = {
   TORRE: 'Guerra de Torre',
-  NOATUM: 'Guerra de Noatum',
+  KEFRA: 'Kefra',
 };
 
 export function isValidCombo(classe: string, especializacao: string): boolean {

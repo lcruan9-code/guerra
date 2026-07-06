@@ -1,55 +1,56 @@
 import { describe, expect, test } from 'vitest';
-import { computeActiveWar } from '../lib/war-schedule';
+import { activeDayWars, warsOfDow } from '../lib/war-schedule';
 
-const TIMES = { TORRE: '21:00', NOATUM: '21:00' };
+const TIMES = { TORRE: '21:00', KEFRA: '20:00' };
 
 // instante UTC de um horário de São Paulo (UTC-3)
 function sp(dia: string, hora: string): Date {
   return new Date(`${dia}T${hora}:00-03:00`);
 }
+const tipos = (d: Date) => activeDayWars(d, TIMES).wars.map((w) => w.tipo);
 
-// datas-âncora: 2026-07-01=quarta, 03=sexta, 04=sábado, 05=domingo, 06=segunda
-describe('computeActiveWar (guerra ativa do dia, vira na meia-noite SP)', () => {
-  test('quarta de manhã → Torre da própria quarta às 21h', () => {
-    const w = computeActiveWar(sp('2026-07-01', '10:00'), TIMES);
-    expect(w.tipo).toBe('TORRE');
-    expect(w.dia).toBe('2026-07-01');
-    expect(w.dataUtc.toISOString()).toBe(sp('2026-07-01', '21:00').toISOString());
+// âncoras: 2026-07-06=segunda, 07=terça, 08=quarta, 11=sábado, 12=domingo, 13=segunda
+describe('warsOfDow', () => {
+  test('segunda→[Torre], terça→[Torre,Kefra], sáb/dom→[]', () => {
+    expect(warsOfDow(1)).toEqual(['TORRE']);
+    expect(warsOfDow(2)).toEqual(['TORRE', 'KEFRA']);
+    expect(warsOfDow(6)).toEqual([]);
+    expect(warsOfDow(0)).toEqual([]);
+  });
+});
+
+describe('activeDayWars', () => {
+  test('segunda → só Torre, no próprio dia', () => {
+    const d = activeDayWars(sp('2026-07-06', '10:00'), TIMES);
+    expect(d.dia).toBe('2026-07-06');
+    expect(tipos(sp('2026-07-06', '10:00'))).toEqual(['TORRE']);
   });
 
-  test('quarta às 22h (após o horário) → ainda a Torre de quarta (só reseta na virada)', () => {
-    const w = computeActiveWar(sp('2026-07-01', '22:00'), TIMES);
-    expect(w.tipo).toBe('TORRE');
-    expect(w.dia).toBe('2026-07-01');
+  test('terça → Torre + Kefra no mesmo dia', () => {
+    const d = activeDayWars(sp('2026-07-07', '10:00'), TIMES);
+    expect(d.dia).toBe('2026-07-07');
+    expect(d.wars.map((w) => w.tipo)).toEqual(['TORRE', 'KEFRA']);
+    const kefra = d.wars.find((w) => w.tipo === 'KEFRA')!;
+    expect(kefra.dataUtc.toISOString()).toBe(sp('2026-07-07', '20:00').toISOString());
   });
 
-  test('quinta 00:10 (virou o dia) → Torre de quinta, reset', () => {
-    const w = computeActiveWar(sp('2026-07-02', '00:10'), TIMES);
-    expect(w.tipo).toBe('TORRE');
-    expect(w.dia).toBe('2026-07-02');
+  test('terça à noite (após horários) → ainda terça (só reseta na virada)', () => {
+    expect(activeDayWars(sp('2026-07-07', '23:30'), TIMES).dia).toBe('2026-07-07');
   });
 
-  test('guerra de madrugada: quinta 06:00, guerra foi às 05h → ainda é a de quinta', () => {
-    const w = computeActiveWar(sp('2026-07-02', '06:00'), { TORRE: '05:00', NOATUM: '21:00' });
-    expect(w.dia).toBe('2026-07-02');
-    expect(w.dataUtc.toISOString()).toBe(sp('2026-07-02', '05:00').toISOString());
+  test('quarta 00:10 → reset, só Torre de quarta', () => {
+    const d = activeDayWars(sp('2026-07-08', '00:10'), TIMES);
+    expect(d.dia).toBe('2026-07-08');
+    expect(d.wars.map((w) => w.tipo)).toEqual(['TORRE']);
   });
 
-  test('sábado (sem guerra) → Noatum de domingo', () => {
-    const w = computeActiveWar(sp('2026-07-04', '12:00'), TIMES);
-    expect(w.tipo).toBe('NOATUM');
-    expect(w.dia).toBe('2026-07-05');
+  test('sábado → pula fim de semana, Torre de segunda', () => {
+    const d = activeDayWars(sp('2026-07-11', '12:00'), TIMES);
+    expect(d.dia).toBe('2026-07-13');
+    expect(d.wars.map((w) => w.tipo)).toEqual(['TORRE']);
   });
 
-  test('domingo às 23h (após o horário) → ainda Noatum de domingo', () => {
-    const w = computeActiveWar(sp('2026-07-05', '23:00'), TIMES);
-    expect(w.tipo).toBe('NOATUM');
-    expect(w.dia).toBe('2026-07-05');
-  });
-
-  test('segunda 00:10 → Torre de segunda, reset', () => {
-    const w = computeActiveWar(sp('2026-07-06', '00:10'), TIMES);
-    expect(w.tipo).toBe('TORRE');
-    expect(w.dia).toBe('2026-07-06');
+  test('domingo → Torre de segunda', () => {
+    expect(activeDayWars(sp('2026-07-12', '15:00'), TIMES).dia).toBe('2026-07-13');
   });
 });

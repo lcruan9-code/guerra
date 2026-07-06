@@ -1,6 +1,6 @@
 import { query, queryOne, withTransaction } from './db';
 import { HttpError } from './auth';
-import { ensureNextEvent, getEvent, type EventRow } from './events';
+import { ensureDayEvents, getEvent, type EventRow } from './events';
 import { getWarTimes } from './settings';
 import { listAwards, getWeekMeta, type AwardKey } from './rankings';
 
@@ -27,12 +27,12 @@ export interface RosterEntry {
   kefra: number;
 }
 
-// Teto de KS por guerra: Torre = 3 (Kill Steals no dia), Noatum/Kefra = 1 (semana).
+// Teto de KS por guerra: Torre = 3 (Kill Steals no dia), Kefra = 1 (na semana).
 export function ksCapForTipo(tipo: string): number {
-  return tipo === 'NOATUM' ? 1 : 3;
+  return tipo === 'KEFRA' ? 1 : 3;
 }
 export function ksLabelForTipo(tipo: string): 'KS' | 'Kefra' {
-  return tipo === 'NOATUM' ? 'Kefra' : 'KS';
+  return tipo === 'KEFRA' ? 'Kefra' : 'KS';
 }
 
 export interface RosterView {
@@ -85,7 +85,7 @@ export async function setKs(eventId: string, userId: string, value: number): Pro
 }
 
 export interface AdminOverview {
-  warTimes: { TORRE: string; NOATUM: string };
+  warTimes: { TORRE: string; KEFRA: string };
   week: { inicio: string; fim: string; texto: string };
   awards: Awaited<ReturnType<typeof listAwards>>;
   nextEvent: { id: string; tipo: string; dataIso: string; cancelado: boolean };
@@ -94,12 +94,13 @@ export interface AdminOverview {
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  const [warTimes, week, awards, event] = await Promise.all([
+  const [warTimes, week, awards, dayEvents] = await Promise.all([
     getWarTimes(),
     getWeekMeta(),
     listAwards(),
-    ensureNextEvent(),
+    ensureDayEvents(),
   ]);
+  const event = dayEvents[0];
   const { roster } = await getRosterView(event.id);
   const players = await query<{ userId: string; nome: string; role: string; pontos: number; presencas: number }>(
     `SELECT u.id AS "userId", u.nome, u.role,
@@ -168,14 +169,14 @@ export async function listRecentEvents(limit = 16): Promise<EventListItem[]> {
   }));
 }
 
-export async function updateWarTimes(torre?: string, noatum?: string): Promise<void> {
+export async function updateWarTimes(torre?: string, kefra?: string): Promise<void> {
   if (torre !== undefined) {
     if (!VALID_TIME.test(torre)) throw new HttpError(400, 'Horário da Torre inválido (use HH:MM).');
     await setSetting('war_time_torre', torre);
   }
-  if (noatum !== undefined) {
-    if (!VALID_TIME.test(noatum)) throw new HttpError(400, 'Horário da Noatum inválido (use HH:MM).');
-    await setSetting('war_time_noatum', noatum);
+  if (kefra !== undefined) {
+    if (!VALID_TIME.test(kefra)) throw new HttpError(400, 'Horário do Kefra inválido (use HH:MM).');
+    await setSetting('war_time_kefra', kefra);
   }
 }
 

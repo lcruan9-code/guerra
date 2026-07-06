@@ -110,6 +110,11 @@ input::placeholder { color: #6b6253; }
 .btn-ghost.full { width: 100%; justify-content: center; }
 .link-muted { background: none; border: none; color: #6b6253; font-size: 13px; text-decoration: underline; cursor: pointer; }
 
+/* ---------------- WAR BLOCK ---------------- */
+.war-block { margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid rgba(212, 178, 90, .12); }
+.war-block:last-child { border-bottom: none; margin-bottom: 0; }
+.day-note { text-align: center; font-size: 13px; letter-spacing: .04em; color: var(--accent-bright); background: rgba(255, 122, 46, .08); border: 1px solid rgba(255, 122, 46, .25); border-radius: 8px; padding: 8px; margin: 0 0 16px; }
+
 /* ---------------- WAR HERO ---------------- */
 .war-hero {
   position: relative; overflow: hidden; text-align: center; border-radius: 12px; padding: 26px 20px;
