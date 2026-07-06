@@ -68,6 +68,10 @@ export async function setKs(eventId: string, userId: string, value: number): Pro
     const cap = ksCapForTipo(evRows[0].tipo);
     const label = ksLabelForTipo(evRows[0].tipo);
     if (value > cap) throw new HttpError(400, `Cada jogador dá no máximo ${cap} ${label} nesta guerra.`);
+    // Kefra (cap 1): escolha única — marcar alguém limpa quem estava marcado antes.
+    if (cap === 1 && value >= 1) {
+      await q('UPDATE confirmations SET ks = 0 WHERE event_id = $1 AND user_id <> $2', [eventId, userId]);
+    }
     const others = await q<{ s: number }>(
       'SELECT COALESCE(SUM(ks), 0)::int AS s FROM confirmations WHERE event_id = $1 AND user_id <> $2',
       [eventId, userId],

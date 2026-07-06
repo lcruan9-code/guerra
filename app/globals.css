@@ -274,6 +274,10 @@ input::placeholder { color: #6b6253; }
 .ks-step:disabled { opacity: .3; cursor: default; }
 .ks-val { min-width: 18px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 16px; color: #6b6253; }
 .ks-val.on { color: var(--accent-bright); }
+.ks-radio { background: rgba(212,178,90,.08); border: 1px solid rgba(212,178,90,.25); color: #a89c87; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; letter-spacing: .04em; cursor: pointer; white-space: nowrap; }
+.ks-radio.on { background: linear-gradient(180deg, #ffb347, #f2591a); border-color: var(--accent-bright); color: #1f0a02; }
+.ks-radio.full { display: block; width: 100%; text-align: center; padding: 11px; }
+.ks-radio.full.on { background: rgba(125,151,232,.16); border-color: #9fb0e8; color: #9fb0e8; }
 
 .tab-row { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid rgba(212, 178, 90, .16); overflow-x: auto; }
 .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 12px; font-family: var(--font-cinzel), serif; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; white-space: nowrap; }

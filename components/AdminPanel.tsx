@@ -280,6 +280,8 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
     nao: roster.filter((r) => r.status === 'NAO_VOU').length,
   };
   const hoje = data.nextEvent.id;
+  const kefraMode = ksCap === 1; // Kefra: escolha única (ou outra guild)
+  const holder = vou.find((r) => (r.ks ?? 0) > 0)?.userId ?? null;
 
   return (
     <section className="admin-card">
@@ -312,9 +314,19 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
         <p className="empty-hint">Ninguém confirmou presença nesta guerra.</p>
       ) : (
         <>
-          <p style={{ fontSize: 13, color: ksTotal >= ksCap ? '#7fd18f' : '#e0a35a', marginBottom: 8 }}>
-            {ksLabel} lançados: <strong>{ksTotal}/{ksCap}</strong>
-          </p>
+          {kefraMode ? (
+            <p style={{ fontSize: 13, color: '#a89c87', marginBottom: 8 }}>
+              Quem deu o {ksLabel}:{' '}
+              <strong style={{ color: holder ? '#ffd9a8' : '#9fb0e8' }}>
+                {holder ? vou.find((r) => r.userId === holder)?.nome : 'Outra guild / ninguém'}
+              </strong>
+            </p>
+          ) : (
+            <p style={{ fontSize: 13, color: ksTotal >= ksCap ? '#7fd18f' : '#e0a35a', marginBottom: 8 }}>
+              {ksLabel} lançados: <strong>{ksTotal}/{ksCap}</strong>
+            </p>
+          )}
+
           <div style={{ overflowX: 'auto' }}>
             <table className="tbl">
               <thead>
@@ -342,15 +354,24 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
                         <span className={`pill ${r.participou ? 'vou' : 'nao'}`}>{r.participou ? '✔' : '—'}</span>
                       </td>
                       <td>
-                        <div className="ks-stepper">
-                          <button className="ks-step" disabled={ks <= 0} onClick={() => changeKs(r.userId, ks - 1)}>
-                            −
+                        {kefraMode ? (
+                          <button
+                            className={`ks-radio${ks > 0 ? ' on' : ''}`}
+                            onClick={() => changeKs(r.userId, ks > 0 ? 0 : 1)}
+                          >
+                            {ks > 0 ? '★ deu o KS' : 'marcar'}
                           </button>
-                          <span className={`ks-val${ks > 0 ? ' on' : ''}`}>{ks}</span>
-                          <button className="ks-step" disabled={!canAdd} onClick={() => changeKs(r.userId, ks + 1)}>
-                            +
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="ks-stepper">
+                            <button className="ks-step" disabled={ks <= 0} onClick={() => changeKs(r.userId, ks - 1)}>
+                              −
+                            </button>
+                            <span className={`ks-val${ks > 0 ? ' on' : ''}`}>{ks}</span>
+                            <button className="ks-step" disabled={!canAdd} onClick={() => changeKs(r.userId, ks + 1)}>
+                              +
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -358,11 +379,25 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
               </tbody>
             </table>
           </div>
-          <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 10 }}>
-            {ksLabel === 'Kefra'
-              ? 'O Kefra tem apenas 1 KS na semana.'
-              : 'A Torre tem até 3 KS por dia — uma pessoa pode pegar mais de um.'}
-          </p>
+
+          {kefraMode ? (
+            <>
+              <button
+                className={`ks-radio full${holder === null ? ' on' : ''}`}
+                style={{ marginTop: 10 }}
+                onClick={() => holder && changeKs(holder, 0)}
+              >
+                🛡️ Outra guild pegou o KS
+              </button>
+              <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 8 }}>
+                O Kefra tem só 1 KS na semana — marque quem deu, ou &quot;outra guild&quot; se não foi nosso.
+              </p>
+            </>
+          ) : (
+            <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 10 }}>
+              A Torre tem até 3 KS por dia — uma pessoa pode pegar mais de um.
+            </p>
+          )}
         </>
       )}
     </section>
