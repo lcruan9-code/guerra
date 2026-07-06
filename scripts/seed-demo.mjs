@@ -123,7 +123,7 @@ for (const ev of events) {
       [randomUUID(), pl.id, ev.id, charId, status, participou],
     );
   }
-  // Quem deu o KS da guerra (1 por guerra): sorteia entre quem foi.
+  // KS da guerra: Torre até 3 (distribuídos entre quem foi), Noatum/Kefra 1.
   if (ev.past || ev.today) {
     const foram = (
       await client.query(
@@ -132,8 +132,15 @@ for (const ev of events) {
       )
     ).rows;
     if (foram.length) {
-      const ksUser = pick(foram).user_id;
-      await client.query('UPDATE events SET ks_user_id=$2 WHERE id=$1', [ev.id, ksUser]);
+      const cap = ev.tipo === 'NOATUM' ? 1 : 3;
+      const tally = {};
+      for (let k = 0; k < cap; k++) {
+        const uid = pick(foram).user_id;
+        tally[uid] = (tally[uid] ?? 0) + 1;
+      }
+      for (const [uid, n] of Object.entries(tally)) {
+        await client.query('UPDATE confirmations SET ks=$3 WHERE event_id=$1 AND user_id=$2', [ev.id, uid, n]);
+      }
     }
   }
 }

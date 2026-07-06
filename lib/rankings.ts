@@ -18,15 +18,17 @@ export interface AwardRow {
 }
 
 export async function rankBy(key: AwardKey, week: WeekRange, limit = 20): Promise<RankEntry[]> {
-  // KS Torre e Kefra: contam quantas guerras cada um "deu o KS" (events.ks_user_id).
+  // KS Torre (soma de KS nas Torres) e Kefra (KS na Noatum) — de confirmations.ks.
   if (key === 'KS_TORRE' || key === 'KEFRA') {
     const tipo = key === 'KS_TORRE' ? 'TORRE' : 'NOATUM';
     return query<RankEntry>(
-      `SELECT u.id AS "userId", u.nome, COUNT(*)::int AS valor
-       FROM events e
-       JOIN users u ON u.id = e.ks_user_id
+      `SELECT u.id AS "userId", u.nome, COALESCE(SUM(c.ks), 0)::int AS valor
+       FROM users u
+       JOIN confirmations c ON c.user_id = u.id
+       JOIN events e ON e.id = c.event_id
        WHERE e.tipo = $1 AND e.dia BETWEEN $2 AND $3 AND e.cancelado = false
        GROUP BY u.id, u.nome
+       HAVING COALESCE(SUM(c.ks), 0) > 0
        ORDER BY valor DESC, u.nome ASC
        LIMIT $4`,
       [tipo, week.inicio, week.fim, limit],

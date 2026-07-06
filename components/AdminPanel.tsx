@@ -224,8 +224,9 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
   const [events, setEvents] = useState<EventListItemDTO[]>([]);
   const [selectedId, setSelectedId] = useState(data.nextEvent.id);
   const [roster, setRoster] = useState<RosterEntryDTO[]>([]);
-  const [ksUserId, setKsUserId] = useState<string | null>(null);
   const [ksLabel, setKsLabel] = useState<'KS' | 'Kefra'>('KS');
+  const [ksCap, setKsCap] = useState(3);
+  const [ksTotal, setKsTotal] = useState(0);
 
   useEffect(() => {
     api<EventListItemDTO[]>('/api/admin/events')
@@ -237,11 +238,12 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
     try {
       const view = await api<RosterViewDTO>(`/api/admin/roster?eventId=${eventId}`);
       setRoster(view.roster);
-      setKsUserId(view.ksUserId);
       setKsLabel(view.ksLabel);
+      setKsCap(view.ksCap);
+      setKsTotal(view.ksTotal);
     } catch {
       setRoster([]);
-      setKsUserId(null);
+      setKsTotal(0);
     }
   }, []);
 
@@ -249,14 +251,15 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
     void loadRoster(selectedId);
   }, [selectedId, loadRoster]);
 
-  async function toggleKs(userId: string) {
-    const next = ksUserId === userId ? null : userId;
-    setKsUserId(next); // otimista
+  async function changeKs(userId: string, value: number) {
+    if (value < 0) return;
     try {
-      await api('/api/admin/ks', { method: 'POST', body: JSON.stringify({ eventId: selectedId, userId: next }) });
+      await api('/api/admin/ks', { method: 'POST', body: JSON.stringify({ eventId: selectedId, userId, ks: value }) });
+      await loadRoster(selectedId);
       await reload();
-    } catch {
-      await loadRoster(selectedId); // reverte para o estado real
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : 'Erro ao lançar KS.');
+      await loadRoster(selectedId);
     }
   }
 
@@ -301,7 +304,7 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
 
       {selectedId !== hoje && (
         <p style={{ fontSize: 12, color: '#e0a35a', marginBottom: 10 }}>
-          ⚑ Guerra anterior. Marque quem foi e quem deu o {ksLabel}.
+          ⚑ Guerra anterior. Marque quem foi e quantos {ksLabel} cada um deu.
         </p>
       )}
 
@@ -309,6 +312,9 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
         <p className="empty-hint">Ninguém confirmou presença nesta guerra.</p>
       ) : (
         <>
+          <p style={{ fontSize: 13, color: ksTotal >= ksCap ? '#7fd18f' : '#e0a35a', marginBottom: 8 }}>
+            {ksLabel} lançados: <strong>{ksTotal}/{ksCap}</strong>
+          </p>
           <div style={{ overflowX: 'auto' }}>
             <table className="tbl">
               <thead>
@@ -319,34 +325,43 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
                 </tr>
               </thead>
               <tbody>
-                {vou.map((r) => (
-                  <tr key={r.userId}>
-                    <td className="nome">
-                      {r.nome}
-                      {r.personagem && (
-                        <div style={{ fontSize: 11, color: '#8a7f6e', fontWeight: 400 }}>
-                          {r.personagem} · {r.classe}
+                {vou.map((r) => {
+                  const ks = r.ks ?? 0;
+                  const canAdd = ksTotal < ksCap && ks < ksCap;
+                  return (
+                    <tr key={r.userId}>
+                      <td className="nome">
+                        {r.nome}
+                        {r.personagem && (
+                          <div style={{ fontSize: 11, color: '#8a7f6e', fontWeight: 400 }}>
+                            {r.personagem} · {r.classe}
+                          </div>
+                        )}
+                      </td>
+                      <td className="check-cell" onClick={() => toggleParticipou(r.userId, !(r.participou ?? false))}>
+                        <span className={`pill ${r.participou ? 'vou' : 'nao'}`}>{r.participou ? '✔' : '—'}</span>
+                      </td>
+                      <td>
+                        <div className="ks-stepper">
+                          <button className="ks-step" disabled={ks <= 0} onClick={() => changeKs(r.userId, ks - 1)}>
+                            −
+                          </button>
+                          <span className={`ks-val${ks > 0 ? ' on' : ''}`}>{ks}</span>
+                          <button className="ks-step" disabled={!canAdd} onClick={() => changeKs(r.userId, ks + 1)}>
+                            +
+                          </button>
                         </div>
-                      )}
-                    </td>
-                    <td className="check-cell" onClick={() => toggleParticipou(r.userId, !(r.participou ?? false))}>
-                      <span className={`pill ${r.participou ? 'vou' : 'nao'}`}>{r.participou ? '✔' : '—'}</span>
-                    </td>
-                    <td>
-                      <button
-                        className={`ks-btn${ksUserId === r.userId ? ' on' : ''}`}
-                        onClick={() => toggleKs(r.userId)}
-                      >
-                        {ksUserId === r.userId ? `★ ${ksLabel}` : 'marcar'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 10 }}>
-            O {ksLabel} é de <strong>uma</strong> pessoa por guerra — clicar em outro troca o marcado.
+            {ksLabel === 'Kefra'
+              ? 'O Kefra tem apenas 1 KS na semana.'
+              : 'A Torre tem até 3 KS por dia — uma pessoa pode pegar mais de um.'}
           </p>
         </>
       )}

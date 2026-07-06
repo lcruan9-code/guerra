@@ -36,8 +36,9 @@ export interface AdminOverviewDTO {
 }
 
 export interface RosterViewDTO {
-  ksUserId: string | null;
   ksLabel: 'KS' | 'Kefra';
+  ksCap: number;
+  ksTotal: number;
   roster: RosterEntryDTO[];
 }
 

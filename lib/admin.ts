@@ -1,4 +1,4 @@
-import { query, queryOne } from './db';
+import { query, queryOne, withTransaction } from './db';
 import { HttpError } from './auth';
 import { ensureNextEvent, getEvent, type EventRow } from './events';
 import { getWarTimes } from './settings';
@@ -27,17 +27,23 @@ export interface RosterEntry {
   kefra: number;
 }
 
+// Teto de KS por guerra: Torre = 3 (Kill Steals no dia), Noatum/Kefra = 1 (semana).
+export function ksCapForTipo(tipo: string): number {
+  return tipo === 'NOATUM' ? 1 : 3;
+}
+export function ksLabelForTipo(tipo: string): 'KS' | 'Kefra' {
+  return tipo === 'NOATUM' ? 'Kefra' : 'KS';
+}
+
 export interface RosterView {
-  ksUserId: string | null;
   ksLabel: 'KS' | 'Kefra';
+  ksCap: number;
+  ksTotal: number;
   roster: RosterEntry[];
 }
 
 export async function getRosterView(eventId: string): Promise<RosterView> {
-  const ev = await queryOne<{ tipo: string; ks_user_id: string | null }>(
-    'SELECT tipo, ks_user_id FROM events WHERE id = $1',
-    [eventId],
-  );
+  const ev = await queryOne<{ tipo: string }>('SELECT tipo FROM events WHERE id = $1', [eventId]);
   if (!ev) throw new HttpError(404, 'Guerra não encontrada.');
   const roster = await query<RosterEntry>(
     `SELECT c.user_id AS "userId", u.nome, c.status, c.participou, c.ks, c.kefra,
@@ -49,18 +55,33 @@ export async function getRosterView(eventId: string): Promise<RosterView> {
      ORDER BY c.status, u.nome`,
     [eventId],
   );
-  return { ksUserId: ev.ks_user_id, ksLabel: ev.tipo === 'NOATUM' ? 'Kefra' : 'KS', roster };
+  const ksTotal = roster.reduce((s, r) => s + (r.ks ?? 0), 0);
+  return { ksLabel: ksLabelForTipo(ev.tipo), ksCap: ksCapForTipo(ev.tipo), ksTotal, roster };
 }
 
-// Define quem deu o KS da guerra (ou limpa, se userId = null). Só 1 por guerra.
-export async function setEventKs(eventId: string, userId: string | null): Promise<void> {
-  const ev = await getEvent(eventId);
-  if (!ev) throw new HttpError(404, 'Guerra não encontrada.');
-  if (userId) {
-    const owned = await queryOne('SELECT id FROM confirmations WHERE event_id = $1 AND user_id = $2', [eventId, userId]);
-    if (!owned) throw new HttpError(400, 'Esse jogador não confirmou presença nesta guerra.');
-  }
-  await queryOne('UPDATE events SET ks_user_id = $2 WHERE id = $1', [eventId, userId]);
+// Define quantos KS o jogador deu nesta guerra, respeitando o teto por guerra.
+export async function setKs(eventId: string, userId: string, value: number): Promise<void> {
+  if (!Number.isInteger(value) || value < 0) throw new HttpError(400, 'Valor de KS inválido.');
+  await withTransaction(async (q) => {
+    const evRows = await q<{ tipo: string }>('SELECT tipo FROM events WHERE id = $1', [eventId]);
+    if (!evRows[0]) throw new HttpError(404, 'Guerra não encontrada.');
+    const cap = ksCapForTipo(evRows[0].tipo);
+    const label = ksLabelForTipo(evRows[0].tipo);
+    if (value > cap) throw new HttpError(400, `Cada jogador dá no máximo ${cap} ${label} nesta guerra.`);
+    const others = await q<{ s: number }>(
+      'SELECT COALESCE(SUM(ks), 0)::int AS s FROM confirmations WHERE event_id = $1 AND user_id <> $2',
+      [eventId, userId],
+    );
+    if (others[0].s + value > cap) {
+      throw new HttpError(400, `Total de ${label} por guerra é ${cap} (já há ${others[0].s} lançado(s)).`);
+    }
+    const upd = await q('UPDATE confirmations SET ks = $3 WHERE event_id = $1 AND user_id = $2 RETURNING id', [
+      eventId,
+      userId,
+      value,
+    ]);
+    if (!upd[0]) throw new HttpError(404, 'Jogador não confirmou presença nesta guerra.');
+  });
 }
 
 export interface AdminOverview {
