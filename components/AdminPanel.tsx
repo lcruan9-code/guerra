@@ -65,7 +65,19 @@ export default function AdminPanel() {
     <div className="admin-wrap">
       <header className="admin-top">
         <div className="admin-title">⚙️ Painel do Líder</div>
-        <a href="/" className="btn-ghost">Voltar</a>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn-ghost"
+            onClick={() =>
+              void api('/api/leader/lock', { method: 'POST' }).then(() => {
+                window.location.href = '/';
+              })
+            }
+          >
+            🔒 Bloquear
+          </button>
+          <a href="/" className="btn-ghost">Voltar</a>
+        </div>
       </header>
 
       <div className="tab-row">

@@ -6,7 +6,7 @@ import { HttpError, requireUser } from './auth';
 import type { SessionUser } from './types';
 
 const COOKIE = 'guerra_lider';
-const MAX_AGE = 60 * 60 * 24 * 30; // 30 dias
+const MAX_AGE = 60 * 60 * 3; // 3 horas — depois pede a senha de novo
 const KEY = 'lider_senha_hash';
 const DEFAULT_SENHA = 'wyd2026';
 
@@ -78,6 +78,11 @@ export async function changeLeaderPassword(nova: string): Promise<void> {
     [KEY, hash],
   );
   await grant(hash); // mantém quem trocou; os demais cookies caem (fingerprint mudou)
+}
+
+export async function lockLeader(): Promise<void> {
+  const jar = await cookies();
+  jar.delete(COOKIE);
 }
 
 export async function hasLeaderAccess(): Promise<boolean> {
