@@ -8,7 +8,8 @@
     "start": "next start",
     "test": "vitest run",
     "db:init": "node scripts/init-db.mjs",
-    "promote": "node scripts/promote.mjs"
+    "promote": "node scripts/promote.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs"
   },
   "dependencies": {
     "jose": "^6.2.3",
