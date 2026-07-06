@@ -17,31 +17,33 @@ export interface AwardRow {
   ordem: number;
 }
 
-// Consulta SQL de valor por jogador para cada métrica, dentro da faixa da semana.
-function metricSql(key: AwardKey): { select: string; where: string } {
-  switch (key) {
-    case 'PONTOS':
-      return {
-        select: `5 * COUNT(*) FILTER (WHERE c.status = 'VOU') + 5 * COUNT(*) FILTER (WHERE c.participou IS TRUE)`,
-        where: '',
-      };
-    case 'KS_TORRE':
-      return { select: `COALESCE(SUM(c.ks), 0)`, where: `AND e.tipo = 'TORRE'` };
-    case 'KEFRA':
-      return { select: `COALESCE(SUM(c.kefra), 0)`, where: '' };
-    case 'PARTICIPACAO':
-      return { select: `COUNT(*) FILTER (WHERE c.participou IS TRUE)`, where: '' };
-  }
-}
-
 export async function rankBy(key: AwardKey, week: WeekRange, limit = 20): Promise<RankEntry[]> {
-  const { select, where } = metricSql(key);
+  // KS Torre e Kefra: contam quantas guerras cada um "deu o KS" (events.ks_user_id).
+  if (key === 'KS_TORRE' || key === 'KEFRA') {
+    const tipo = key === 'KS_TORRE' ? 'TORRE' : 'NOATUM';
+    return query<RankEntry>(
+      `SELECT u.id AS "userId", u.nome, COUNT(*)::int AS valor
+       FROM events e
+       JOIN users u ON u.id = e.ks_user_id
+       WHERE e.tipo = $1 AND e.dia BETWEEN $2 AND $3 AND e.cancelado = false
+       GROUP BY u.id, u.nome
+       ORDER BY valor DESC, u.nome ASC
+       LIMIT $4`,
+      [tipo, week.inicio, week.fim, limit],
+    );
+  }
+
+  // Pontos e Participação: agregados sobre as confirmações da semana.
+  const select =
+    key === 'PONTOS'
+      ? `5 * COUNT(*) FILTER (WHERE c.status = 'VOU') + 5 * COUNT(*) FILTER (WHERE c.participou IS TRUE)`
+      : `COUNT(*) FILTER (WHERE c.participou IS TRUE)`;
   return query<RankEntry>(
     `SELECT u.id AS "userId", u.nome, (${select})::int AS valor
      FROM users u
      JOIN confirmations c ON c.user_id = u.id
      JOIN events e ON e.id = c.event_id
-     WHERE e.dia BETWEEN $1 AND $2 AND e.cancelado = false ${where}
+     WHERE e.dia BETWEEN $1 AND $2 AND e.cancelado = false
      GROUP BY u.id, u.nome
      HAVING (${select}) > 0
      ORDER BY valor DESC, u.nome ASC

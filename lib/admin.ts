@@ -27,8 +27,19 @@ export interface RosterEntry {
   kefra: number;
 }
 
-export async function getRoster(eventId: string): Promise<RosterEntry[]> {
-  return query<RosterEntry>(
+export interface RosterView {
+  ksUserId: string | null;
+  ksLabel: 'KS' | 'Kefra';
+  roster: RosterEntry[];
+}
+
+export async function getRosterView(eventId: string): Promise<RosterView> {
+  const ev = await queryOne<{ tipo: string; ks_user_id: string | null }>(
+    'SELECT tipo, ks_user_id FROM events WHERE id = $1',
+    [eventId],
+  );
+  if (!ev) throw new HttpError(404, 'Guerra não encontrada.');
+  const roster = await query<RosterEntry>(
     `SELECT c.user_id AS "userId", u.nome, c.status, c.participou, c.ks, c.kefra,
             ch.nome AS personagem, ch.classe
      FROM confirmations c
@@ -38,6 +49,18 @@ export async function getRoster(eventId: string): Promise<RosterEntry[]> {
      ORDER BY c.status, u.nome`,
     [eventId],
   );
+  return { ksUserId: ev.ks_user_id, ksLabel: ev.tipo === 'NOATUM' ? 'Kefra' : 'KS', roster };
+}
+
+// Define quem deu o KS da guerra (ou limpa, se userId = null). Só 1 por guerra.
+export async function setEventKs(eventId: string, userId: string | null): Promise<void> {
+  const ev = await getEvent(eventId);
+  if (!ev) throw new HttpError(404, 'Guerra não encontrada.');
+  if (userId) {
+    const owned = await queryOne('SELECT id FROM confirmations WHERE event_id = $1 AND user_id = $2', [eventId, userId]);
+    if (!owned) throw new HttpError(400, 'Esse jogador não confirmou presença nesta guerra.');
+  }
+  await queryOne('UPDATE events SET ks_user_id = $2 WHERE id = $1', [eventId, userId]);
 }
 
 export interface AdminOverview {
@@ -56,7 +79,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     listAwards(),
     ensureNextEvent(),
   ]);
-  const roster = await getRoster(event.id);
+  const { roster } = await getRosterView(event.id);
   const players = await query<{ userId: string; nome: string; role: string; pontos: number; presencas: number }>(
     `SELECT u.id AS "userId", u.nome, u.role,
             COALESCE(5 * COUNT(*) FILTER (WHERE c.status = 'VOU')
@@ -180,32 +203,15 @@ export async function controlEvent(eventId: string, action: string, dataIso?: st
   }
 }
 
-// Lançamento de participação + KS + Kefra pelo admin (sem trava de horário).
-export async function setPlayerStats(
+// Lançamento de presença (foi/não foi) pelo admin — sem trava de horário.
+export async function setParticipation(
   eventId: string,
   userId: string,
-  patch: { participou?: boolean; ks?: number; kefra?: number },
+  participou: boolean,
 ): Promise<void> {
-  const sets: string[] = [];
-  const params: unknown[] = [eventId, userId];
-  if (patch.participou !== undefined) {
-    params.push(patch.participou);
-    sets.push(`participou = $${params.length}`);
-  }
-  if (patch.ks !== undefined) {
-    if (!Number.isInteger(patch.ks) || patch.ks < 0) throw new HttpError(400, 'KS inválido.');
-    params.push(patch.ks);
-    sets.push(`ks = $${params.length}`);
-  }
-  if (patch.kefra !== undefined) {
-    if (!Number.isInteger(patch.kefra) || patch.kefra < 0) throw new HttpError(400, 'Kefra inválido.');
-    params.push(patch.kefra);
-    sets.push(`kefra = $${params.length}`);
-  }
-  if (sets.length === 0) return;
   const row = await queryOne(
-    `UPDATE confirmations SET ${sets.join(', ')} WHERE event_id = $1 AND user_id = $2 RETURNING id`,
-    params,
+    `UPDATE confirmations SET participou = $3 WHERE event_id = $1 AND user_id = $2 RETURNING id`,
+    [eventId, userId, participou],
   );
   if (!row) throw new HttpError(404, 'Jogador não confirmou presença nesta guerra.');
 }

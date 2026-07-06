@@ -61,6 +61,8 @@ ALTER TABLE confirmations ADD COLUMN IF NOT EXISTS ks    INT NOT NULL DEFAULT 0;
 ALTER TABLE confirmations ADD COLUMN IF NOT EXISTS kefra INT NOT NULL DEFAULT 0;
 -- Cancelamento de uma guerra específica (a geração lazy pula a cancelada).
 ALTER TABLE events ADD COLUMN IF NOT EXISTS cancelado BOOLEAN NOT NULL DEFAULT false;
+-- Quem deu o KS da guerra (1 por guerra). Torre → ranking KS Torre; Noatum → Kefra.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS ks_user_id TEXT REFERENCES users(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_confirmations_event ON confirmations(event_id);
 CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id);

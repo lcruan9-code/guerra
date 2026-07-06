@@ -109,25 +109,32 @@ for (const ev of events) {
     const status = pick(STATUS);
     const charId = status === 'VOU' ? pl.charIds[0] : null;
     let participou = null;
-    let ks = 0;
-    let kefra = 0;
-    // Guerras já ocorridas (passadas ou a de hoje) têm presença + KS/Kefra lançados,
+    // Guerras já ocorridas (passadas ou a de hoje) têm presença lançada,
     // para popular o painel do líder e os rankings. Futuras ficam só com a confirmação.
     if ((ev.past || ev.today) && status === 'VOU') {
       participou = Math.random() < 0.85; // maioria compareceu
-      if (participou) {
-        ks = ev.tipo === 'TORRE' ? rnd(45) : rnd(8);
-        kefra = rnd(ev.tipo === 'NOATUM' ? 18 : 6);
-      }
     }
     await client.query(
-      `INSERT INTO confirmations (id, user_id, event_id, character_id, status, participou, ks, kefra)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `INSERT INTO confirmations (id, user_id, event_id, character_id, status, participou)
+       VALUES ($1,$2,$3,$4,$5,$6)
        ON CONFLICT (user_id, event_id) DO UPDATE
          SET status = EXCLUDED.status, character_id = EXCLUDED.character_id,
-             participou = EXCLUDED.participou, ks = EXCLUDED.ks, kefra = EXCLUDED.kefra`,
-      [randomUUID(), pl.id, ev.id, charId, status, participou, ks, kefra],
+             participou = EXCLUDED.participou`,
+      [randomUUID(), pl.id, ev.id, charId, status, participou],
     );
+  }
+  // Quem deu o KS da guerra (1 por guerra): sorteia entre quem foi.
+  if (ev.past || ev.today) {
+    const foram = (
+      await client.query(
+        "SELECT user_id FROM confirmations WHERE event_id=$1 AND status='VOU' AND participou IS TRUE",
+        [ev.id],
+      )
+    ).rows;
+    if (foram.length) {
+      const ksUser = pick(foram).user_id;
+      await client.query('UPDATE events SET ks_user_id=$2 WHERE id=$1', [ev.id, ksUser]);
+    }
   }
 }
 

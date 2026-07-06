@@ -35,6 +35,12 @@ export interface AdminOverviewDTO {
   players: Array<{ userId: string; nome: string; role: string; pontos: number; presencas: number }>;
 }
 
+export interface RosterViewDTO {
+  ksUserId: string | null;
+  ksLabel: 'KS' | 'Kefra';
+  roster: RosterEntryDTO[];
+}
+
 export interface EventListItemDTO {
   id: string;
   tipo: string;

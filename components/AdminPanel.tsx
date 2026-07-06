@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { TIPO_LABELS } from '@/lib/wyd';
-import type { AdminOverviewDTO, AwardDTO, EventListItemDTO, RosterEntryDTO } from '@/lib/admin-types';
+import type { AdminOverviewDTO, AwardDTO, EventListItemDTO, RosterEntryDTO, RosterViewDTO } from '@/lib/admin-types';
 import LeaderUnlockCard from './LeaderUnlockCard';
 
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
@@ -223,7 +223,9 @@ function SenhaCard() {
 function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Promise<void> }) {
   const [events, setEvents] = useState<EventListItemDTO[]>([]);
   const [selectedId, setSelectedId] = useState(data.nextEvent.id);
-  const [roster, setRoster] = useState<RosterEntryDTO[]>(data.roster);
+  const [roster, setRoster] = useState<RosterEntryDTO[]>([]);
+  const [ksUserId, setKsUserId] = useState<string | null>(null);
+  const [ksLabel, setKsLabel] = useState<'KS' | 'Kefra'>('KS');
 
   useEffect(() => {
     api<EventListItemDTO[]>('/api/admin/events')
@@ -233,15 +235,40 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
 
   const loadRoster = useCallback(async (eventId: string) => {
     try {
-      setRoster(await api<RosterEntryDTO[]>(`/api/admin/roster?eventId=${eventId}`));
+      const view = await api<RosterViewDTO>(`/api/admin/roster?eventId=${eventId}`);
+      setRoster(view.roster);
+      setKsUserId(view.ksUserId);
+      setKsLabel(view.ksLabel);
     } catch {
       setRoster([]);
+      setKsUserId(null);
     }
   }, []);
 
   useEffect(() => {
     void loadRoster(selectedId);
   }, [selectedId, loadRoster]);
+
+  async function toggleKs(userId: string) {
+    const next = ksUserId === userId ? null : userId;
+    setKsUserId(next); // otimista
+    try {
+      await api('/api/admin/ks', { method: 'POST', body: JSON.stringify({ eventId: selectedId, userId: next }) });
+      await reload();
+    } catch {
+      await loadRoster(selectedId); // reverte para o estado real
+    }
+  }
+
+  async function toggleParticipou(userId: string, participou: boolean) {
+    try {
+      await api('/api/admin/stats', { method: 'POST', body: JSON.stringify({ eventId: selectedId, userId, participou }) });
+      await loadRoster(selectedId);
+      await reload();
+    } catch {
+      // silencioso
+    }
+  }
 
   const vou = roster.filter((r) => r.status === 'VOU');
   const counts = {
@@ -253,7 +280,7 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
 
   return (
     <section className="admin-card">
-      <h2>Presença & lançamento (KS / Kefra)</h2>
+      <h2>Presença & KS</h2>
 
       <label className="mini-label">Guerra</label>
       <select className="field-input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
@@ -274,88 +301,56 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
 
       {selectedId !== hoje && (
         <p style={{ fontSize: 12, color: '#e0a35a', marginBottom: 10 }}>
-          ⚑ Você está lançando uma guerra anterior. Marque quem foi e os KS/Kefra dela.
+          ⚑ Guerra anterior. Marque quem foi e quem deu o {ksLabel}.
         </p>
       )}
 
       {vou.length === 0 ? (
         <p className="empty-hint">Ninguém confirmou presença nesta guerra.</p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>Jogador</th>
-                <th>Foi?</th>
-                <th>KS</th>
-                <th>Kefra</th>
-              </tr>
-            </thead>
-            <tbody>
-              {vou.map((r) => (
-                <StatsRow
-                  key={r.userId}
-                  eventId={selectedId}
-                  entry={r}
-                  reload={async () => {
-                    await loadRoster(selectedId);
-                    await reload();
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Jogador</th>
+                  <th>Foi?</th>
+                  <th>{ksLabel}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vou.map((r) => (
+                  <tr key={r.userId}>
+                    <td className="nome">
+                      {r.nome}
+                      {r.personagem && (
+                        <div style={{ fontSize: 11, color: '#8a7f6e', fontWeight: 400 }}>
+                          {r.personagem} · {r.classe}
+                        </div>
+                      )}
+                    </td>
+                    <td className="check-cell" onClick={() => toggleParticipou(r.userId, !(r.participou ?? false))}>
+                      <span className={`pill ${r.participou ? 'vou' : 'nao'}`}>{r.participou ? '✔' : '—'}</span>
+                    </td>
+                    <td>
+                      <button
+                        className={`ks-btn${ksUserId === r.userId ? ' on' : ''}`}
+                        onClick={() => toggleKs(r.userId)}
+                      >
+                        {ksUserId === r.userId ? `★ ${ksLabel}` : 'marcar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 10 }}>
+            O {ksLabel} é de <strong>uma</strong> pessoa por guerra — clicar em outro troca o marcado.
+          </p>
+        </>
       )}
     </section>
-  );
-}
-
-function StatsRow({ eventId, entry, reload }: { eventId: string; entry: RosterEntryDTO; reload: () => Promise<void> }) {
-  const [ks, setKs] = useState(String(entry.ks));
-  const [kefra, setKefra] = useState(String(entry.kefra));
-
-  async function save(patch: { participou?: boolean; ks?: number; kefra?: number }) {
-    try {
-      await api('/api/admin/stats', { method: 'POST', body: JSON.stringify({ eventId, userId: entry.userId, ...patch }) });
-      if (patch.participou !== undefined) await reload();
-    } catch {
-      // silencioso
-    }
-  }
-
-  return (
-    <tr>
-      <td className="nome">
-        {entry.nome}
-        {entry.personagem && (
-          <div style={{ fontSize: 11, color: '#8a7f6e', fontWeight: 400 }}>
-            {entry.personagem} · {entry.classe}
-          </div>
-        )}
-      </td>
-      <td className="check-cell" onClick={() => save({ participou: !(entry.participou ?? false) })}>
-        <span className={`pill ${entry.participou ? 'vou' : 'nao'}`}>{entry.participou ? '✔' : '—'}</span>
-      </td>
-      <td className="num">
-        <input
-          className="stat-input"
-          inputMode="numeric"
-          value={ks}
-          onChange={(e) => setKs(e.target.value.replace(/\D/g, ''))}
-          onBlur={() => save({ ks: Number(ks || 0) })}
-        />
-      </td>
-      <td className="num">
-        <input
-          className="stat-input"
-          inputMode="numeric"
-          value={kefra}
-          onChange={(e) => setKefra(e.target.value.replace(/\D/g, ''))}
-          onBlur={() => save({ kefra: Number(kefra || 0) })}
-        />
-      </td>
-    </tr>
   );
 }
 
