@@ -3,8 +3,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { TIPO_LABELS } from '@/lib/wyd';
-import type { AdminOverviewDTO, AwardDTO, RosterEntryDTO } from '@/lib/admin-types';
+import type { AdminOverviewDTO, AwardDTO, EventListItemDTO, RosterEntryDTO } from '@/lib/admin-types';
 import LeaderUnlockCard from './LeaderUnlockCard';
+
+const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+function warLabel(ev: { dia: string; tipo: string }): string {
+  const [y, m, d] = ev.dia.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  const tipo = ev.tipo === 'NOATUM' ? 'Noatum' : 'Torre';
+  return `${DIAS[dow]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')} · ${tipo}`;
+}
 
 type Tab = 'guerra' | 'premios' | 'jogadores';
 type Gate = 'loading' | 'locked' | 'nologin' | 'ok';
@@ -199,26 +207,67 @@ function SenhaCard() {
   );
 }
 
-/* ---------------- ROSTER + STATS ---------------- */
+/* ---------------- ROSTER + STATS (com seletor de guerra) ---------------- */
 function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Promise<void> }) {
-  const eventId = data.nextEvent.id;
-  const vou = data.roster.filter((r) => r.status === 'VOU');
+  const [events, setEvents] = useState<EventListItemDTO[]>([]);
+  const [selectedId, setSelectedId] = useState(data.nextEvent.id);
+  const [roster, setRoster] = useState<RosterEntryDTO[]>(data.roster);
+
+  useEffect(() => {
+    api<EventListItemDTO[]>('/api/admin/events')
+      .then(setEvents)
+      .catch(() => setEvents([]));
+  }, []);
+
+  const loadRoster = useCallback(async (eventId: string) => {
+    try {
+      setRoster(await api<RosterEntryDTO[]>(`/api/admin/roster?eventId=${eventId}`));
+    } catch {
+      setRoster([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadRoster(selectedId);
+  }, [selectedId, loadRoster]);
+
+  const vou = roster.filter((r) => r.status === 'VOU');
   const counts = {
-    vou: data.roster.filter((r) => r.status === 'VOU').length,
-    talvez: data.roster.filter((r) => r.status === 'TALVEZ').length,
-    nao: data.roster.filter((r) => r.status === 'NAO_VOU').length,
+    vou: vou.length,
+    talvez: roster.filter((r) => r.status === 'TALVEZ').length,
+    nao: roster.filter((r) => r.status === 'NAO_VOU').length,
   };
+  const hoje = data.nextEvent.id;
 
   return (
     <section className="admin-card">
       <h2>Presença & lançamento (KS / Kefra)</h2>
-      <p style={{ fontSize: 13, color: '#a89c87', marginBottom: 12 }}>
+
+      <label className="mini-label">Guerra</label>
+      <select className="field-input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+        {events.map((ev) => (
+          <option key={ev.id} value={ev.id}>
+            {warLabel(ev)}
+            {ev.id === hoje ? ' · HOJE' : ''}
+            {ev.cancelado ? ' · cancelada' : ''} — {ev.vou} vão / {ev.participou} foram
+          </option>
+        ))}
+      </select>
+
+      <p style={{ fontSize: 13, color: '#a89c87', margin: '12px 0' }}>
         <span className="pill vou">{counts.vou} vão</span>{' '}
         <span className="pill talvez">{counts.talvez} talvez</span>{' '}
         <span className="pill nao">{counts.nao} não</span>
       </p>
+
+      {selectedId !== hoje && (
+        <p style={{ fontSize: 12, color: '#e0a35a', marginBottom: 10 }}>
+          ⚑ Você está lançando uma guerra anterior. Marque quem foi e os KS/Kefra dela.
+        </p>
+      )}
+
       {vou.length === 0 ? (
-        <p className="empty-hint">Ninguém confirmou presença ainda.</p>
+        <p className="empty-hint">Ninguém confirmou presença nesta guerra.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
@@ -232,7 +281,15 @@ function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Pr
             </thead>
             <tbody>
               {vou.map((r) => (
-                <StatsRow key={r.userId} eventId={eventId} entry={r} reload={reload} />
+                <StatsRow
+                  key={r.userId}
+                  eventId={selectedId}
+                  entry={r}
+                  reload={async () => {
+                    await loadRoster(selectedId);
+                    await reload();
+                  }}
+                />
               ))}
             </tbody>
           </table>

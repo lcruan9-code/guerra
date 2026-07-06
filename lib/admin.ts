@@ -27,7 +27,7 @@ export interface RosterEntry {
   kefra: number;
 }
 
-async function getRoster(eventId: string): Promise<RosterEntry[]> {
+export async function getRoster(eventId: string): Promise<RosterEntry[]> {
   return query<RosterEntry>(
     `SELECT c.user_id AS "userId", u.nome, c.status, c.participou, c.ks, c.kefra,
             ch.nome AS personagem, ch.classe
@@ -80,6 +80,48 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     roster,
     players,
   };
+}
+
+export interface EventListItem {
+  id: string;
+  tipo: string;
+  dia: string;
+  dataIso: string;
+  cancelado: boolean;
+  vou: number;
+  participou: number;
+}
+
+// Guerras recentes (para o líder navegar e lançar presença de guerras anteriores).
+export async function listRecentEvents(limit = 16): Promise<EventListItem[]> {
+  const rows = await query<{
+    id: string;
+    tipo: string;
+    dia: string;
+    data: Date;
+    cancelado: boolean;
+    vou: number;
+    participou: number;
+  }>(
+    `SELECT e.id, e.tipo, to_char(e.dia, 'YYYY-MM-DD') AS dia, e.data, e.cancelado,
+            COUNT(*) FILTER (WHERE c.status = 'VOU')::int AS vou,
+            COUNT(*) FILTER (WHERE c.participou IS TRUE)::int AS participou
+     FROM events e
+     LEFT JOIN confirmations c ON c.event_id = e.id
+     GROUP BY e.id
+     ORDER BY e.dia DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    tipo: r.tipo,
+    dia: r.dia,
+    dataIso: new Date(r.data).toISOString(),
+    cancelado: r.cancelado,
+    vou: r.vou,
+    participou: r.participou,
+  }));
 }
 
 export async function updateWarTimes(torre?: string, noatum?: string): Promise<void> {

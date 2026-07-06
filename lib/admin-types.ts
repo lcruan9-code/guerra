@@ -35,6 +35,16 @@ export interface AdminOverviewDTO {
   players: Array<{ userId: string; nome: string; role: string; pontos: number; presencas: number }>;
 }
 
+export interface EventListItemDTO {
+  id: string;
+  tipo: string;
+  dia: string;
+  dataIso: string;
+  cancelado: boolean;
+  vou: number;
+  participou: number;
+}
+
 export interface RankingViewDTO {
   week: { inicio: string; fim: string; texto: string };
   awards: Array<AwardDTO & { top: RankEntryDTO[] }>;

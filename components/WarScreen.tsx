@@ -24,6 +24,7 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
   const [managing, setManaging] = useState(false);
   const [ranking, setRanking] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadLists = useCallback(async () => {
@@ -84,11 +85,32 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
             </div>
           </div>
         </div>
-        <div className="header-right">
-          <div className="user-name">{user.nome}</div>
-          <div className="user-points">{user.pontos} pontos</div>
-        </div>
+        <button className="user-chip" onClick={() => setMenuOpen(true)}>
+          <div className="user-chip-info">
+            <div className="user-name">{user.nome}</div>
+            <div className="user-points">{user.pontos} pontos</div>
+          </div>
+          <span className="user-chip-caret">▾</span>
+        </button>
       </header>
+
+      <div className="nav-row">
+        <button className="btn-ghost accent" onClick={() => setRanking(true)}>
+          🏆 Premiações
+        </button>
+        {leaderUnlocked ? (
+          <a className="btn-ghost" href="/admin">
+            ⚙️ Painel
+          </a>
+        ) : (
+          <button className="btn-ghost" onClick={() => setUnlocking(true)}>
+            🔒 Líder
+          </button>
+        )}
+        <button className="btn-ghost" onClick={() => setManaging(true)}>
+          Personagens
+        </button>
+      </div>
 
       <section className="war-hero">
         <div className="war-kicker">Próxima guerra</div>
@@ -120,24 +142,6 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
       )}
       {error && <p className="error-text" style={{ marginTop: 12, textAlign: 'center' }}>{error}</p>}
 
-      <div className="nav-row">
-        <button className="btn-ghost accent" onClick={() => setRanking(true)}>
-          🏆 Premiações
-        </button>
-        {leaderUnlocked ? (
-          <a className="btn-ghost" href="/admin">
-            ⚙️ Painel
-          </a>
-        ) : (
-          <button className="btn-ghost" onClick={() => setUnlocking(true)}>
-            🔒 Líder
-          </button>
-        )}
-        <button className="btn-ghost" onClick={() => setManaging(true)}>
-          Personagens
-        </button>
-      </div>
-
       {leaderUnlocked && (
         <LeaderPanel eventId={event.id} locked={event.locked} lists={lists} onParticipationChanged={loadLists} />
       )}
@@ -145,6 +149,47 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
       <div style={{ marginTop: 8 }}>
         <WarLists lists={lists} />
       </div>
+
+      {menuOpen && (
+        <div className="sheet-overlay" onClick={() => setMenuOpen(false)}>
+          <div className="sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="menu-head">
+              <div className="menu-name">{user.nome}</div>
+              <div className="menu-points">{user.pontos} pontos{user.role === 'ADMIN' ? ' · líder' : ''}</div>
+            </div>
+            <button
+              className="menu-item"
+              onClick={() => {
+                setMenuOpen(false);
+                setManaging(true);
+              }}
+            >
+              🧙 Meus personagens
+            </button>
+            <button
+              className="menu-item"
+              onClick={() => {
+                setMenuOpen(false);
+                setRanking(true);
+              }}
+            >
+              🏆 Premiações & ranking
+            </button>
+            <a className="menu-item" href="/api/auth/google">
+              🔁 Trocar de conta
+            </a>
+            <button
+              className="menu-item danger"
+              onClick={() => void api('/api/auth/logout', { method: 'POST' }).then(() => window.location.reload())}
+            >
+              🚪 Sair da conta
+            </button>
+            <button className="btn-ghost full" style={{ marginTop: 8 }} onClick={() => setMenuOpen(false)}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
 
       {ranking && <RankingSheet onClose={() => setRanking(false)} />}
 
@@ -202,14 +247,6 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
             <button onClick={() => setManaging(false)} className="btn-ghost full" style={{ marginTop: 4 }}>
               Fechar
             </button>
-            <div style={{ marginTop: 18, textAlign: 'center' }}>
-              <button
-                onClick={() => void api('/api/auth/logout', { method: 'POST' }).then(() => window.location.reload())}
-                className="link-muted"
-              >
-                Sair da conta
-              </button>
-            </div>
           </div>
         </div>
       )}
