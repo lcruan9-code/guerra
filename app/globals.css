@@ -259,6 +259,8 @@ input::placeholder { color: #6b6253; }
 .tbl th { text-align: left; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid rgba(212, 178, 90, .16); }
 .tbl td { padding: 8px; border-bottom: 1px solid rgba(212, 178, 90, .08); color: #d8cdb8; }
 .tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { white-space: nowrap; }
+.tbl th { font-size: 9px; }
 .tbl .nome { font-weight: 600; color: #f0e6d2; }
 .tbl tr.me { background: rgba(255, 122, 46, .08); }
 .pill { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em; padding: 2px 7px; border-radius: 4px; }

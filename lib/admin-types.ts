@@ -42,6 +42,26 @@ export interface RosterViewDTO {
   roster: RosterEntryDTO[];
 }
 
+export interface DayWarDTO {
+  id: string;
+  tipo: string;
+  ksLabel: 'KS' | 'Kefra';
+  ksCap: number;
+  ksTotal: number;
+}
+export interface DayRowDTO {
+  userId: string;
+  nome: string;
+  personagem: string | null;
+  classe: string | null;
+  cells: Record<string, { participou: boolean | null; ks: number }>;
+}
+export interface DayViewDTO {
+  dia: string;
+  wars: DayWarDTO[];
+  rows: DayRowDTO[];
+}
+
 export interface EventListItemDTO {
   id: string;
   tipo: string;

@@ -59,6 +59,73 @@ export async function getRosterView(eventId: string): Promise<RosterView> {
   return { ksLabel: ksLabelForTipo(ev.tipo), ksCap: ksCapForTipo(ev.tipo), ksTotal, roster };
 }
 
+// Visão por DIA: junta as guerras do dia (Torre e, na terça, Kefra) numa tabela só.
+export interface DayWarInfo {
+  id: string;
+  tipo: string;
+  ksLabel: 'KS' | 'Kefra';
+  ksCap: number;
+  ksTotal: number;
+}
+export interface DayRow {
+  userId: string;
+  nome: string;
+  personagem: string | null;
+  classe: string | null;
+  cells: Record<string, { participou: boolean | null; ks: number }>; // por eventId
+}
+export interface DayView {
+  dia: string;
+  wars: DayWarInfo[];
+  rows: DayRow[];
+}
+
+export async function getDayView(dia: string): Promise<DayView> {
+  const evs = await query<{ id: string; tipo: string }>(
+    `SELECT id, tipo FROM events WHERE dia = $1
+     ORDER BY (CASE tipo WHEN 'TORRE' THEN 0 WHEN 'KEFRA' THEN 1 ELSE 2 END)`,
+    [dia],
+  );
+  const wars: DayWarInfo[] = [];
+  const byUser = new Map<string, DayRow>();
+
+  for (const ev of evs) {
+    const rows = await query<{
+      userId: string;
+      nome: string;
+      personagem: string | null;
+      classe: string | null;
+      participou: boolean | null;
+      ks: number;
+    }>(
+      `SELECT c.user_id AS "userId", u.nome, c.participou, c.ks, ch.nome AS personagem, ch.classe
+       FROM confirmations c
+       JOIN users u ON u.id = c.user_id
+       LEFT JOIN characters ch ON ch.id = c.character_id
+       WHERE c.event_id = $1 AND c.status = 'VOU'
+       ORDER BY u.nome`,
+      [ev.id],
+    );
+    const ksTotal = rows.reduce((s, r) => s + (r.ks ?? 0), 0);
+    wars.push({ id: ev.id, tipo: ev.tipo, ksLabel: ksLabelForTipo(ev.tipo), ksCap: ksCapForTipo(ev.tipo), ksTotal });
+    for (const r of rows) {
+      let row = byUser.get(r.userId);
+      if (!row) {
+        row = { userId: r.userId, nome: r.nome, personagem: r.personagem, classe: r.classe, cells: {} };
+        byUser.set(r.userId, row);
+      }
+      if (!row.personagem && r.personagem) {
+        row.personagem = r.personagem;
+        row.classe = r.classe;
+      }
+      row.cells[ev.id] = { participou: r.participou, ks: r.ks ?? 0 };
+    }
+  }
+
+  const rows = [...byUser.values()].sort((a, b) => a.nome.localeCompare(b.nome));
+  return { dia, wars, rows };
+}
+
 // Define quantos KS o jogador deu nesta guerra, respeitando o teto por guerra.
 export async function setKs(eventId: string, userId: string, value: number): Promise<void> {
   if (!Number.isInteger(value) || value < 0) throw new HttpError(400, 'Valor de KS inválido.');

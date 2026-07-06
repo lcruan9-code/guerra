@@ -3,15 +3,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { TIPO_LABELS } from '@/lib/wyd';
-import type { AdminOverviewDTO, AwardDTO, EventListItemDTO, RosterEntryDTO, RosterViewDTO } from '@/lib/admin-types';
+import type { AdminOverviewDTO, AwardDTO, DayViewDTO, EventListItemDTO } from '@/lib/admin-types';
 import LeaderUnlockCard from './LeaderUnlockCard';
 
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-function warLabel(ev: { dia: string; tipo: string }): string {
-  const [y, m, d] = ev.dia.split('-').map(Number);
+function dayLabel(dia: string): string {
+  const [y, m, d] = dia.split('-').map(Number);
   const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  const tipo = ev.tipo === 'KEFRA' ? 'Kefra' : 'Torre';
-  return `${DIAS[dow]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')} · ${tipo}`;
+  return `${DIAS[dow]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
 type Tab = 'guerra' | 'premios' | 'jogadores';
@@ -219,183 +218,176 @@ function SenhaCard() {
   );
 }
 
-/* ---------------- ROSTER + STATS (com seletor de guerra) ---------------- */
+/* ---------------- PRESENÇA & KS (por dia, combinado) ---------------- */
 function RosterCard({ data, reload }: { data: AdminOverviewDTO; reload: () => Promise<void> }) {
   const [events, setEvents] = useState<EventListItemDTO[]>([]);
-  const [selectedId, setSelectedId] = useState(data.nextEvent.id);
-  const [roster, setRoster] = useState<RosterEntryDTO[]>([]);
-  const [ksLabel, setKsLabel] = useState<'KS' | 'Kefra'>('KS');
-  const [ksCap, setKsCap] = useState(3);
-  const [ksTotal, setKsTotal] = useState(0);
+  const [dia, setDia] = useState<string>('');
+  const [view, setView] = useState<DayViewDTO | null>(null);
 
   useEffect(() => {
     api<EventListItemDTO[]>('/api/admin/events')
-      .then(setEvents)
+      .then((evs) => {
+        setEvents(evs);
+        const hojeDia = evs.find((e) => e.id === data.nextEvent.id)?.dia ?? evs[0]?.dia ?? '';
+        setDia(hojeDia);
+      })
       .catch(() => setEvents([]));
-  }, []);
+  }, [data.nextEvent.id]);
 
-  const loadRoster = useCallback(async (eventId: string) => {
+  const loadDay = useCallback(async (d: string) => {
+    if (!d) return;
     try {
-      const view = await api<RosterViewDTO>(`/api/admin/roster?eventId=${eventId}`);
-      setRoster(view.roster);
-      setKsLabel(view.ksLabel);
-      setKsCap(view.ksCap);
-      setKsTotal(view.ksTotal);
+      setView(await api<DayViewDTO>(`/api/admin/day?dia=${d}`));
     } catch {
-      setRoster([]);
-      setKsTotal(0);
+      setView(null);
     }
   }, []);
 
   useEffect(() => {
-    void loadRoster(selectedId);
-  }, [selectedId, loadRoster]);
+    void loadDay(dia);
+  }, [dia, loadDay]);
 
-  async function changeKs(userId: string, value: number) {
+  async function toggleParticipou(eventId: string, userId: string, participou: boolean) {
+    try {
+      await api('/api/admin/stats', { method: 'POST', body: JSON.stringify({ eventId, userId, participou }) });
+      await loadDay(dia);
+      await reload();
+    } catch {
+      /* silencioso */
+    }
+  }
+
+  async function changeKs(eventId: string, userId: string, value: number) {
     if (value < 0) return;
     try {
-      await api('/api/admin/ks', { method: 'POST', body: JSON.stringify({ eventId: selectedId, userId, ks: value }) });
-      await loadRoster(selectedId);
+      await api('/api/admin/ks', { method: 'POST', body: JSON.stringify({ eventId, userId, ks: value }) });
+      await loadDay(dia);
       await reload();
     } catch (e) {
       alert(e instanceof ApiError ? e.message : 'Erro ao lançar KS.');
-      await loadRoster(selectedId);
+      await loadDay(dia);
     }
   }
 
-  async function toggleParticipou(userId: string, participou: boolean) {
-    try {
-      await api('/api/admin/stats', { method: 'POST', body: JSON.stringify({ eventId: selectedId, userId, participou }) });
-      await loadRoster(selectedId);
-      await reload();
-    } catch {
-      // silencioso
-    }
-  }
-
-  const vou = roster.filter((r) => r.status === 'VOU');
-  const counts = {
-    vou: vou.length,
-    talvez: roster.filter((r) => r.status === 'TALVEZ').length,
-    nao: roster.filter((r) => r.status === 'NAO_VOU').length,
-  };
-  const hoje = data.nextEvent.id;
-  const kefraMode = ksCap === 1; // Kefra: escolha única (ou outra guild)
-  const holder = vou.find((r) => (r.ks ?? 0) > 0)?.userId ?? null;
+  // dias únicos (a partir da lista de eventos), rótulo pt-BR
+  const dias = [...new Set(events.map((e) => e.dia))];
+  const hojeDia = events.find((e) => e.id === data.nextEvent.id)?.dia ?? '';
 
   return (
     <section className="admin-card">
-      <h2>Presença & KS</h2>
+      <h2>Presença &amp; KS</h2>
 
-      <label className="mini-label">Guerra</label>
-      <select className="field-input" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-        {events.map((ev) => (
-          <option key={ev.id} value={ev.id}>
-            {warLabel(ev)}
-            {ev.id === hoje ? ' · HOJE' : ''}
-            {ev.cancelado ? ' · cancelada' : ''} — {ev.vou} vão / {ev.participou} foram
-          </option>
-        ))}
+      <label className="mini-label">Dia</label>
+      <select className="field-input" value={dia} onChange={(e) => setDia(e.target.value)}>
+        {dias.map((d) => {
+          const doDia = events.filter((e) => e.dia === d);
+          const tipos = doDia.map((e) => (e.tipo === 'KEFRA' ? 'Kefra' : 'Torre')).join(' + ');
+          return (
+            <option key={d} value={d}>
+              {dayLabel(d)} · {tipos}
+              {d === hojeDia ? ' · HOJE' : ''}
+            </option>
+          );
+        })}
       </select>
 
-      <p style={{ fontSize: 13, color: '#a89c87', margin: '12px 0' }}>
-        <span className="pill vou">{counts.vou} vão</span>{' '}
-        <span className="pill talvez">{counts.talvez} talvez</span>{' '}
-        <span className="pill nao">{counts.nao} não</span>
-      </p>
-
-      {selectedId !== hoje && (
-        <p style={{ fontSize: 12, color: '#e0a35a', marginBottom: 10 }}>
-          ⚑ Guerra anterior. Marque quem foi e quantos {ksLabel} cada um deu.
-        </p>
-      )}
-
-      {vou.length === 0 ? (
-        <p className="empty-hint">Ninguém confirmou presença nesta guerra.</p>
+      {!view || view.rows.length === 0 ? (
+        <p className="empty-hint" style={{ marginTop: 14 }}>Ninguém confirmou presença neste dia.</p>
       ) : (
         <>
-          {kefraMode ? (
-            <p style={{ fontSize: 13, color: '#a89c87', marginBottom: 8 }}>
-              Quem deu o {ksLabel}:{' '}
-              <strong style={{ color: holder ? '#ffd9a8' : '#9fb0e8' }}>
-                {holder ? vou.find((r) => r.userId === holder)?.nome : 'Outra guild / ninguém'}
-              </strong>
-            </p>
-          ) : (
-            <p style={{ fontSize: 13, color: ksTotal >= ksCap ? '#7fd18f' : '#e0a35a', marginBottom: 8 }}>
-              {ksLabel} lançados: <strong>{ksTotal}/{ksCap}</strong>
+          {dia !== hojeDia && (
+            <p style={{ fontSize: 12, color: '#e0a35a', margin: '10px 0' }}>
+              ⚑ Dia anterior — lançando presença/KS retroativo.
             </p>
           )}
-
-          <div style={{ overflowX: 'auto' }}>
+          <div style={{ overflowX: 'auto', marginTop: 12 }}>
             <table className="tbl">
               <thead>
                 <tr>
                   <th>Jogador</th>
-                  <th>Foi?</th>
-                  <th>{ksLabel}</th>
+                  {view.wars.map((w) => (
+                    <th key={`f-${w.id}`}>Foi {w.tipo === 'KEFRA' ? 'Kefra' : 'Torre'}?</th>
+                  ))}
+                  {view.wars.map((w) => (
+                    <th key={`k-${w.id}`}>{w.ksLabel}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {vou.map((r) => {
-                  const ks = r.ks ?? 0;
-                  const canAdd = ksTotal < ksCap && ks < ksCap;
-                  return (
-                    <tr key={r.userId}>
-                      <td className="nome">
-                        {r.nome}
-                        {r.personagem && (
-                          <div style={{ fontSize: 11, color: '#8a7f6e', fontWeight: 400 }}>
-                            {r.personagem} · {r.classe}
-                          </div>
-                        )}
-                      </td>
-                      <td className="check-cell" onClick={() => toggleParticipou(r.userId, !(r.participou ?? false))}>
-                        <span className={`pill ${r.participou ? 'vou' : 'nao'}`}>{r.participou ? '✔' : '—'}</span>
-                      </td>
-                      <td>
-                        {kefraMode ? (
-                          <button
-                            className={`ks-radio${ks > 0 ? ' on' : ''}`}
-                            onClick={() => changeKs(r.userId, ks > 0 ? 0 : 1)}
-                          >
-                            {ks > 0 ? '★ deu o KS' : 'marcar'}
-                          </button>
-                        ) : (
+                {view.rows.map((r) => (
+                  <tr key={r.userId}>
+                    <td className="nome">
+                      {r.nome}
+                      {r.personagem && (
+                        <div style={{ fontSize: 11, color: '#8a7f6e', fontWeight: 400 }}>
+                          {r.personagem} · {r.classe}
+                        </div>
+                      )}
+                    </td>
+
+                    {view.wars.map((w) => {
+                      const cell = r.cells[w.id];
+                      if (!cell) return <td key={`f-${w.id}`} className="num" style={{ color: '#4a4436' }}>·</td>;
+                      return (
+                        <td
+                          key={`f-${w.id}`}
+                          className="check-cell"
+                          onClick={() => toggleParticipou(w.id, r.userId, !(cell.participou ?? false))}
+                        >
+                          <span className={`pill ${cell.participou ? 'vou' : 'nao'}`}>{cell.participou ? '✔' : '—'}</span>
+                        </td>
+                      );
+                    })}
+
+                    {view.wars.map((w) => {
+                      const cell = r.cells[w.id];
+                      if (!cell) return <td key={`k-${w.id}`} className="num" style={{ color: '#4a4436' }}>·</td>;
+                      const ks = cell.ks;
+                      if (w.ksCap === 1) {
+                        return (
+                          <td key={`k-${w.id}`}>
+                            <button
+                              className={`ks-radio${ks > 0 ? ' on' : ''}`}
+                              onClick={() => changeKs(w.id, r.userId, ks > 0 ? 0 : 1)}
+                            >
+                              {ks > 0 ? '★' : 'marcar'}
+                            </button>
+                          </td>
+                        );
+                      }
+                      const canAdd = w.ksTotal < w.ksCap && ks < w.ksCap;
+                      return (
+                        <td key={`k-${w.id}`}>
                           <div className="ks-stepper">
-                            <button className="ks-step" disabled={ks <= 0} onClick={() => changeKs(r.userId, ks - 1)}>
+                            <button className="ks-step" disabled={ks <= 0} onClick={() => changeKs(w.id, r.userId, ks - 1)}>
                               −
                             </button>
                             <span className={`ks-val${ks > 0 ? ' on' : ''}`}>{ks}</span>
-                            <button className="ks-step" disabled={!canAdd} onClick={() => changeKs(r.userId, ks + 1)}>
+                            <button className="ks-step" disabled={!canAdd} onClick={() => changeKs(w.id, r.userId, ks + 1)}>
                               +
                             </button>
                           </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
-          {kefraMode ? (
-            <>
-              <button
-                className={`ks-radio full${holder === null ? ' on' : ''}`}
-                style={{ marginTop: 10 }}
-                onClick={() => holder && changeKs(holder, 0)}
-              >
-                🛡️ Outra guild pegou o KS
-              </button>
-              <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 8 }}>
-                O Kefra tem só 1 KS na semana — marque quem deu, ou &quot;outra guild&quot; se não foi nosso.
+          {view.wars.map((w) => {
+            if (w.ksCap !== 1) return null;
+            const holder = view.rows.find((r) => (r.cells[w.id]?.ks ?? 0) > 0);
+            return (
+              <p key={`note-${w.id}`} style={{ fontSize: 12, color: '#8a7f6e', marginTop: 10 }}>
+                {w.ksLabel}: {holder ? <strong style={{ color: '#ffd9a8' }}>{holder.nome}</strong> : 'outra guild / ninguém'} — clique no ★ de novo para tirar (outra guild pegou).
               </p>
-            </>
-          ) : (
-            <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 10 }}>
-              A Torre tem até 3 KS por dia — uma pessoa pode pegar mais de um.
+            );
+          })}
+          {view.wars.some((w) => w.ksCap > 1) && (
+            <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 6 }}>
+              Torre: até 3 KS por dia — uma pessoa pode pegar mais de um.
             </p>
           )}
         </>
