@@ -1,6 +1,6 @@
 import { query, queryOne, withTransaction } from './db';
 import { HttpError } from './auth';
-import { ensureDayEvents, getEvent, type EventRow } from './events';
+import { ensureDayEvents, getEvent, resyncFutureEvents, type EventRow } from './events';
 import { getWarTimes, getWarDurations, getWarDowOverrides } from './settings';
 import { listAwards, getWeekMeta, type AwardKey } from './rankings';
 
@@ -283,6 +283,8 @@ export async function updateWarTimes(input: WarTimesInput): Promise<void> {
     validDur(durKefra, 'Kefra');
     await setSetting('war_dur_kefra', String(durKefra));
   }
+  // Aplica os horários novos às guerras já criadas que ainda não começaram.
+  await resyncFutureEvents();
 }
 
 export async function updateWeek(inicio?: string, fim?: string, texto?: string): Promise<void> {
@@ -324,7 +326,15 @@ export async function controlEvent(eventId: string, action: string, dataIso?: st
     if (!dataIso) throw new HttpError(400, 'Informe a nova data/hora.');
     const d = new Date(dataIso);
     if (Number.isNaN(d.getTime())) throw new HttpError(400, 'Data/hora inválida.');
-    await queryOne('UPDATE events SET data = $2 WHERE id = $1', [eventId, d.toISOString()]);
+    // Recalcula o fim a partir da duração do tipo e reabre (limpa "Kefra morto").
+    const durs = await getWarDurations();
+    const durMin = event.tipo === 'TORRE' || event.tipo === 'KEFRA' ? durs[event.tipo] : 20;
+    const fim = new Date(d.getTime() + durMin * 60 * 1000);
+    await queryOne('UPDATE events SET data = $2, fim = $3, encerrado_em = NULL WHERE id = $1', [
+      eventId,
+      d.toISOString(),
+      fim.toISOString(),
+    ]);
   } else {
     throw new HttpError(400, 'Ação inválida.');
   }

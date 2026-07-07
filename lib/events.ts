@@ -1,5 +1,5 @@
-import { queryOne, newId } from './db';
-import { activeDayWars } from './war-schedule';
+import { query, queryOne, newId } from './db';
+import { activeDayWars, warDateUtc, warEndUtc } from './war-schedule';
 import { getWarTimes, getWarDurations, getWarDowOverrides } from './settings';
 import type { WarTipo } from './types';
 
@@ -65,4 +65,22 @@ export async function getEvent(id: string): Promise<EventRow | null> {
 // "Kefra morto" / encerrar guerra: marca o fim manual (idempotente).
 export async function finalizeEvent(id: string): Promise<void> {
   await queryOne('UPDATE events SET encerrado_em = now() WHERE id = $1 AND encerrado_em IS NULL', [id]);
+}
+
+// Realinha as guerras AINDA NÃO iniciadas ao horário atual (base + override do dia
+// + duração). Chamado ao salvar horários no painel, pra a mudança valer nas guerras
+// já criadas — não só nas futuras. Não mexe em guerra em andamento/passada.
+export async function resyncFutureEvents(): Promise<void> {
+  const [times, durs, byDow] = await Promise.all([getWarTimes(), getWarDurations(), getWarDowOverrides()]);
+  const rows = await query<{ id: string; tipo: WarTipo; dia: string }>(
+    "SELECT id, tipo, to_char(dia,'YYYY-MM-DD') AS dia FROM events WHERE data > now() AND cancelado = false",
+  );
+  for (const r of rows) {
+    if (r.tipo !== 'TORRE' && r.tipo !== 'KEFRA') continue;
+    const dow = new Date(`${r.dia}T00:00:00Z`).getUTCDay();
+    const time = byDow[dow]?.[r.tipo] ?? times[r.tipo];
+    const data = warDateUtc(r.dia, time);
+    const fim = warEndUtc(data, durs[r.tipo]);
+    await queryOne('UPDATE events SET data = $2, fim = $3 WHERE id = $1', [r.id, data.toISOString(), fim.toISOString()]);
+  }
 }
