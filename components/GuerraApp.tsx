@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import type { CharacterDTO, ConfirmStatus, Role, WarTipo } from '@/lib/types';
 import CharacterWizard from './CharacterWizard';
+import LoginView from './LoginView';
 import WarScreen from './WarScreen';
 
 export interface WarDTO {
@@ -44,8 +45,8 @@ export default function GuerraApp() {
   if (state.kind === 'loading') {
     return <div className="center-screen">Carregando…</div>;
   }
-  // Sem sessão: cadastro cria a conta + 1º personagem e abre a sessão (cookie).
-  if (state.kind === 'anon') return <CharacterWizard register onDone={load} />;
+  // Sem sessão: login pelo nome do personagem (ou cadastro se não existir).
+  if (state.kind === 'anon') return <LoginView onDone={load} />;
   if (state.data.characters.length === 0) {
     return <CharacterWizard onDone={load} />;
   }

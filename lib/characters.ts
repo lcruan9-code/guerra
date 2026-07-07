@@ -22,10 +22,28 @@ function validate(input: CharacterInput): string {
   return nome;
 }
 
+// Login sem senha: acha o usuário dono de um personagem com esse nome.
+// Case-insensitive; retorna null se não existe.
+export async function loginByCharacterName(nomeRaw: string): Promise<SessionUser | null> {
+  const nome = (nomeRaw ?? '').trim();
+  if (!nome) return null;
+  return queryOne<SessionUser>(
+    `SELECT u.id, u.nome, u.role
+     FROM characters c JOIN users u ON u.id = c.user_id
+     WHERE lower(c.nome) = lower($1)
+     ORDER BY c.created_at
+     LIMIT 1`,
+    [nome],
+  );
+}
+
 // Cadastro sem login: cria o usuário (nome = personagem principal) e seu
-// primeiro personagem de uma vez. Chamado quando ainda não há sessão.
+// primeiro personagem de uma vez. Se já existe personagem com esse nome,
+// apenas entra nele (idempotente por nome).
 export async function registerWithFirstCharacter(input: CharacterInput): Promise<SessionUser> {
   const nome = validate(input);
+  const existing = await loginByCharacterName(nome);
+  if (existing) return existing;
   return withTransaction(async (q) => {
     const users = await q<SessionUser>(
       `INSERT INTO users (id, nome) VALUES ($1, $2)
