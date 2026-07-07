@@ -46,12 +46,13 @@ const PLAYERS = [
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 
-// limpa dados demo anteriores (identificados por google_sub demo-*)
+// limpa dados demo anteriores (identificados pelo nome dos jogadores fictícios)
 // Fase de teste: zera confirmações e eventos (recria do zero com o novo calendário).
 await client.query('DELETE FROM confirmations');
 await client.query('DELETE FROM events');
 
-const { rows: oldUsers } = await client.query("SELECT id FROM users WHERE google_sub LIKE 'demo-%'");
+const demoNames = PLAYERS.map((p) => p.nome);
+const { rows: oldUsers } = await client.query('SELECT id FROM users WHERE nome = ANY($1)', [demoNames]);
 const oldIds = oldUsers.map((r) => r.id);
 if (oldIds.length) {
   await client.query('DELETE FROM characters WHERE user_id = ANY($1)', [oldIds]);
@@ -63,10 +64,7 @@ const players = [];
 for (let i = 0; i < PLAYERS.length; i++) {
   const p = PLAYERS[i];
   const id = randomUUID();
-  await client.query(
-    `INSERT INTO users (id, google_sub, email, nome, role) VALUES ($1,$2,$3,$4,'MEMBRO')`,
-    [id, `demo-${i + 1}`, `${p.nome.toLowerCase()}@demo.guerra`, p.nome],
-  );
+  await client.query(`INSERT INTO users (id, nome, role) VALUES ($1,$2,'MEMBRO')`, [id, p.nome]);
   const charIds = [];
   for (let c = 0; c < p.chars.length; c++) {
     const [cnome, classe, esp] = p.chars[c];

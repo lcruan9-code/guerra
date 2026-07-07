@@ -5,16 +5,24 @@ visão tática da composição (classes/especializações) antes da batalha.
 
 ## Stack
 
-Next.js 16 (App Router, TS) · Tailwind v4 · PostgreSQL (Neon) · Google OAuth · Vercel
+Next.js 16 (App Router, TS) · Tailwind v4 · PostgreSQL (Neon) · Vercel
+
+## Login
+
+Sem senha nem e-mail: no 1º acesso o jogador cadastra o personagem (nome, classe,
+especialização) e a sessão fica salva num cookie do navegador por 30 dias — ao
+reabrir o site as informações dele já estão lá. Cada usuário é identificado pelo
+nome do personagem. Limpar os dados do navegador ou trocar de aparelho cria uma
+conta nova (não há recuperação).
+
+O **painel do líder** é liberado por senha (padrão `wyd2026`, trocável no próprio
+painel), independente da identidade do jogador.
 
 ## Rodando local
 
 1. `cp .env.example .env.local` e preencher:
    - `DATABASE_URL` — Postgres (Neon)
    - `JWT_SECRET` — `openssl rand -hex 32`
-   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — credencial OAuth (Web) no Google Cloud Console
-     com redirect `http://localhost:3000/api/auth/google/callback`
-   - `APP_URL=http://localhost:3000`
 2. `npm install`
 3. `npm run db:init` — aplica o schema (idempotente)
 4. `npm run dev`
@@ -24,7 +32,7 @@ Next.js 16 (App Router, TS) · Tailwind v4 · PostgreSQL (Neon) · Google OAuth 
 | Comando | Função |
 |---|---|
 | `npm run db:init` | Aplica `lib/schema.sql` |
-| `npm run promote -- <email>` | Promove usuário a líder (ADMIN) |
+| `npm run seed:demo` | Popula dados fictícios para teste visual |
 | `npm test` | Testes de domínio (vitest) |
 
 ## Regras do domínio

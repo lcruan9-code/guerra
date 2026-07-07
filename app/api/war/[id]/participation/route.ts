@@ -1,9 +1,10 @@
-import { requireAdmin, toResponse } from '@/lib/auth';
+import { toResponse } from '@/lib/auth';
+import { requireLeader } from '@/lib/leader-auth';
 import { setParticipation } from '@/lib/war';
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
-    await requireAdmin();
+    await requireLeader();
     const { id } = await ctx.params;
     const body = (await req.json()) as { userId?: string; participou?: boolean };
     if (!body.userId || typeof body.participou !== 'boolean') {

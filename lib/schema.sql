@@ -1,11 +1,22 @@
 CREATE TABLE IF NOT EXISTS users (
   id         TEXT PRIMARY KEY,
-  google_sub TEXT NOT NULL UNIQUE,
-  email      TEXT NOT NULL UNIQUE,
   nome       TEXT NOT NULL,
   role       TEXT NOT NULL DEFAULT 'MEMBRO' CHECK (role IN ('ADMIN','MEMBRO')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Migração: bancos antigos exigiam login Google (google_sub/email). Sem login,
+-- a identidade vive no cookie do navegador; solta as antigas colunas obrigatórias.
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'google_sub') THEN
+    ALTER TABLE users ALTER COLUMN google_sub DROP NOT NULL;
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_google_sub_key;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'email') THEN
+    ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS characters (
   id             TEXT PRIMARY KEY,

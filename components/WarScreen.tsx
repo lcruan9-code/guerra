@@ -85,12 +85,13 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
             <button className="menu-item" onClick={() => { setMenuOpen(false); setRanking(true); }}>
               🏆 Premiações & ranking
             </button>
-            <a className="menu-item" href="/api/auth/google">
-              🔁 Trocar de conta
-            </a>
             <button
               className="menu-item danger"
-              onClick={() => void api('/api/auth/logout', { method: 'POST' }).then(() => window.location.reload())}
+              onClick={() => {
+                if (confirm('Sair apaga a sessão deste aparelho. Sem login, você recomeça o cadastro do zero. Continuar?')) {
+                  void api('/api/auth/logout', { method: 'POST' }).then(() => window.location.reload());
+                }
+              }}
             >
               🚪 Sair da conta
             </button>

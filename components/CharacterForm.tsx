@@ -10,9 +10,11 @@ interface Props {
   initial?: CharacterDTO;
   onSaved: () => void;
   onCancel?: () => void;
+  /** 1º cadastro (sem sessão ainda): cria o usuário + personagem e abre a sessão. */
+  register?: boolean;
 }
 
-export default function CharacterForm({ initial, onSaved, onCancel }: Props) {
+export default function CharacterForm({ initial, onSaved, onCancel, register }: Props) {
   const [nome, setNome] = useState(initial?.nome ?? '');
   const [classe, setClasse] = useState<Classe | null>(initial?.classe ?? null);
   const [espec, setEspec] = useState<Especializacao | null>(initial?.especializacao ?? null);
@@ -38,7 +40,7 @@ export default function CharacterForm({ initial, onSaved, onCancel }: Props) {
           body: JSON.stringify({ nome, classe, especializacao: espec }),
         });
       } else {
-        await api('/api/characters', {
+        await api(register ? '/api/auth/register' : '/api/characters', {
           method: 'POST',
           body: JSON.stringify({ nome, classe, especializacao: espec }),
         });

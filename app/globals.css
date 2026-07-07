@@ -62,15 +62,6 @@ input::placeholder { color: #6b6253; }
 .login-card-title { font-family: var(--font-cinzel), serif; font-size: 14px; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; }
 .login-sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; letter-spacing: .04em; }
 
-.btn-google {
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
-  background: #fff; color: #1f2937; border: none; padding: 13px; border-radius: 6px; cursor: pointer;
-  font-weight: 700; font-size: 15px; letter-spacing: .02em; transition: transform .12s ease, box-shadow .15s ease;
-}
-.btn-google:hover { transform: translateY(-1px); box-shadow: 0 10px 30px -12px rgba(255,255,255,.35); }
-.btn-google:active { transform: translateY(0); }
-.g-mark { width: 20px; height: 20px; flex: 0 0 auto; }
-
 .error-text { color: #ff8a7a; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
 
 /* ---------------- APP SHELL ---------------- */

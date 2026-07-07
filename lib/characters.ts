@@ -1,7 +1,7 @@
 import { query, queryOne, withTransaction, newId } from './db';
 import { HttpError } from './auth';
 import { isValidCombo } from './wyd';
-import type { CharacterDTO } from './types';
+import type { CharacterDTO, SessionUser } from './types';
 
 const MAX_CHARS = 2;
 
@@ -20,6 +20,26 @@ function validate(input: CharacterInput): string {
     throw new HttpError(400, 'Combinação de classe e especialização inválida.');
   }
   return nome;
+}
+
+// Cadastro sem login: cria o usuário (nome = personagem principal) e seu
+// primeiro personagem de uma vez. Chamado quando ainda não há sessão.
+export async function registerWithFirstCharacter(input: CharacterInput): Promise<SessionUser> {
+  const nome = validate(input);
+  return withTransaction(async (q) => {
+    const users = await q<SessionUser>(
+      `INSERT INTO users (id, nome) VALUES ($1, $2)
+       RETURNING id, nome, role`,
+      [newId(), nome],
+    );
+    const user = users[0];
+    await q(
+      `INSERT INTO characters (id, user_id, nome, classe, especializacao, principal)
+       VALUES ($1, $2, $3, $4, $5, true)`,
+      [newId(), user.id, nome, input.classe, input.especializacao],
+    );
+    return user;
+  });
 }
 
 export async function listCharacters(userId: string): Promise<CharacterDTO[]> {
@@ -53,12 +73,19 @@ export async function createCharacter(userId: string, input: CharacterInput): Pr
 
 export async function updateCharacter(userId: string, id: string, input: CharacterInput): Promise<CharacterDTO> {
   const nome = validate(input);
-  const row = await queryOne<CharacterDTO>(
-    `UPDATE characters SET nome = $3, classe = $4, especializacao = $5
-     WHERE id = $1 AND user_id = $2
-     RETURNING id, nome, classe, especializacao, principal`,
-    [id, userId, nome, input.classe, input.especializacao],
-  );
-  if (!row) throw new HttpError(404, 'Personagem não encontrado.');
-  return row;
+  return withTransaction(async (q) => {
+    const rows = await q<CharacterDTO>(
+      `UPDATE characters SET nome = $3, classe = $4, especializacao = $5
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, nome, classe, especializacao, principal`,
+      [id, userId, nome, input.classe, input.especializacao],
+    );
+    const row = rows[0];
+    if (!row) throw new HttpError(404, 'Personagem não encontrado.');
+    // O nome exibido do usuário acompanha o personagem principal.
+    if (row.principal) {
+      await q('UPDATE users SET nome = $2 WHERE id = $1', [userId, nome]);
+    }
+    return row;
+  });
 }
