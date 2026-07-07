@@ -8,6 +8,7 @@ export async function POST(req: Request): Promise<Response> {
     const body = (await req.json()) as {
       torre?: string;
       kefra?: string;
+      torreTerca?: string;
       durTorre?: number;
       durKefra?: number;
     };

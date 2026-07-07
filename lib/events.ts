@@ -1,6 +1,6 @@
 import { queryOne, newId } from './db';
 import { activeDayWars } from './war-schedule';
-import { getWarTimes, getWarDurations } from './settings';
+import { getWarTimes, getWarDurations, getWarDowOverrides } from './settings';
 import type { WarTipo } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -27,10 +27,10 @@ export function isEventEnded(ev: EventRow, now: Date = new Date()): boolean {
 // de concorrência via UNIQUE(dia, tipo) + ON CONFLICT DO NOTHING. Se TODAS as
 // guerras do dia estiverem canceladas, pula para o próximo dia com guerra.
 export async function ensureDayEvents(now: Date = new Date()): Promise<EventRow[]> {
-  const [times, durs] = await Promise.all([getWarTimes(), getWarDurations()]);
+  const [times, durs, byDow] = await Promise.all([getWarTimes(), getWarDurations(), getWarDowOverrides()]);
   let cursor = now;
   for (let guard = 0; guard < 12; guard++) {
-    const { dia, wars } = activeDayWars(cursor, times, durs);
+    const { dia, wars } = activeDayWars(cursor, times, durs, byDow);
     const out: EventRow[] = [];
     for (const w of wars) {
       let ev = await queryOne<EventRow>(
@@ -50,8 +50,9 @@ export async function ensureDayEvents(now: Date = new Date()): Promise<EventRow[
       }
       if (ev && !ev.cancelado) out.push(ev);
     }
-    if (out.length) return out;
-    // dia inteiro cancelado → próximo dia com guerra
+    // Mostra o dia enquanto tiver ao menos uma guerra ainda não encerrada.
+    // Se todas já acabaram (ou foram canceladas), abre o próximo dia com guerra.
+    if (out.some((ev) => !isEventEnded(ev, now))) return out;
     cursor = new Date(Date.parse(`${dia}T00:00:00-03:00`) + DAY_MS);
   }
   throw new Error('Não foi possível determinar as guerras do dia.');

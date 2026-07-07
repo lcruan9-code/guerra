@@ -1,7 +1,7 @@
 import { query, queryOne, withTransaction } from './db';
 import { HttpError } from './auth';
 import { ensureDayEvents, getEvent, type EventRow } from './events';
-import { getWarTimes, getWarDurations } from './settings';
+import { getWarTimes, getWarDurations, getWarDowOverrides } from './settings';
 import { listAwards, getWeekMeta, type AwardKey } from './rankings';
 
 const VALID_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -159,6 +159,7 @@ export async function setKs(eventId: string, userId: string, value: number): Pro
 export interface AdminOverview {
   warTimes: { TORRE: string; KEFRA: string };
   warDurations: { TORRE: number; KEFRA: number };
+  torreTerca: string; // Torre da terça (override); vazio = usa a base
   week: { inicio: string; fim: string; texto: string };
   awards: Awaited<ReturnType<typeof listAwards>>;
   nextEvent: { id: string; tipo: string; dataIso: string; cancelado: boolean };
@@ -167,9 +168,10 @@ export interface AdminOverview {
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  const [warTimes, warDurations, week, awards, dayEvents] = await Promise.all([
+  const [warTimes, warDurations, byDow, week, awards, dayEvents] = await Promise.all([
     getWarTimes(),
     getWarDurations(),
+    getWarDowOverrides(),
     getWeekMeta(),
     listAwards(),
     ensureDayEvents(),
@@ -189,6 +191,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   return {
     warTimes,
     warDurations,
+    torreTerca: byDow[2]?.TORRE ?? '',
     week,
     awards,
     nextEvent: {
@@ -247,6 +250,7 @@ export async function listRecentEvents(limit = 16): Promise<EventListItem[]> {
 export interface WarTimesInput {
   torre?: string;
   kefra?: string;
+  torreTerca?: string; // Torre só da terça (dia do Kefra)
   durTorre?: number;
   durKefra?: number;
 }
@@ -258,7 +262,7 @@ function validDur(v: number, label: string): void {
 }
 
 export async function updateWarTimes(input: WarTimesInput): Promise<void> {
-  const { torre, kefra, durTorre, durKefra } = input;
+  const { torre, kefra, torreTerca, durTorre, durKefra } = input;
   if (torre !== undefined) {
     if (!VALID_TIME.test(torre)) throw new HttpError(400, 'Horário da Torre inválido (use HH:MM).');
     await setSetting('war_time_torre', torre);
@@ -266,6 +270,10 @@ export async function updateWarTimes(input: WarTimesInput): Promise<void> {
   if (kefra !== undefined) {
     if (!VALID_TIME.test(kefra)) throw new HttpError(400, 'Horário do Kefra inválido (use HH:MM).');
     await setSetting('war_time_kefra', kefra);
+  }
+  if (torreTerca !== undefined) {
+    if (!VALID_TIME.test(torreTerca)) throw new HttpError(400, 'Horário da Torre (terça) inválido (use HH:MM).');
+    await setSetting('war_time_torre_2', torreTerca); // 2 = terça
   }
   if (durTorre !== undefined) {
     validDur(durTorre, 'Torre');

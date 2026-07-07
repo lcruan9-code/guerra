@@ -95,6 +95,7 @@ export default function AdminPanel() {
 /* ---------------- GUERRA ---------------- */
 function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Promise<void> }) {
   const [torre, setTorre] = useState(data.warTimes.TORRE);
+  const [torreTer, setTorreTer] = useState(data.torreTerca || data.warTimes.TORRE);
   const [kefra, setKefra] = useState(data.warTimes.KEFRA);
   const [durTorre, setDurTorre] = useState(String(data.warDurations.TORRE));
   const [durKefra, setDurKefra] = useState(String(data.warDurations.KEFRA));
@@ -105,7 +106,13 @@ function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Pro
     try {
       await api('/api/admin/war-times', {
         method: 'POST',
-        body: JSON.stringify({ torre, kefra, durTorre: Number(durTorre), durKefra: Number(durKefra) }),
+        body: JSON.stringify({
+          torre,
+          torreTerca: torreTer,
+          kefra,
+          durTorre: Number(durTorre),
+          durKefra: Number(durKefra),
+        }),
       });
       setHint('Horários salvos.');
       await reload();
@@ -142,13 +149,20 @@ function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Pro
         <h2>Horários padrão</h2>
         <div className="row-2">
           <div>
-            <label className="mini-label">Torre — início (Seg–Sex)</label>
+            <label className="mini-label">Torre — início (Seg, Qua–Sex)</label>
             <input className="field-input" type="time" value={torre} onChange={(e) => setTorre(e.target.value)} />
           </div>
           <div>
             <label className="mini-label">Torre — duração (min)</label>
             <input className="field-input" type="number" min={1} max={180} value={durTorre} onChange={(e) => setDurTorre(e.target.value)} />
           </div>
+        </div>
+        <div className="row-2" style={{ marginTop: 10 }}>
+          <div>
+            <label className="mini-label">Torre — início na TERÇA (dia do Kefra)</label>
+            <input className="field-input" type="time" value={torreTer} onChange={(e) => setTorreTer(e.target.value)} />
+          </div>
+          <div />
         </div>
         <div className="row-2" style={{ marginTop: 10 }}>
           <div>
@@ -162,6 +176,7 @@ function GuerraTab({ data, reload }: { data: AdminOverviewDTO; reload: () => Pro
         </div>
         <p style={{ fontSize: 12, color: '#8a7f6e', marginTop: 8 }}>
           Torre encerra sozinha no fim da duração. Kefra é mob: encerra no botão “Kefra morto” ou ao atingir o tempo máx.
+          Na terça a Torre usa o horário próprio (por causa do Kefra à noite).
         </p>
         <div className="save-hint">{hint}</div>
         <button className="btn-primary" onClick={saveTimes}>Salvar horários</button>

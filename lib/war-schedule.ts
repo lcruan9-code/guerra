@@ -55,6 +55,7 @@ export function activeDayWars(
   nowUtc: Date,
   times: WarTimes,
   durs: WarDurations = DEFAULT_DURATIONS,
+  byDow: Record<number, Partial<WarTimes>> = {},
 ): ActiveDay {
   for (let i = 0; i < 8; i++) {
     const probe = new Date(nowUtc.getTime() + i * DAY_MS);
@@ -64,7 +65,8 @@ export function activeDayWars(
       return {
         dia,
         wars: tipos.map((tipo) => {
-          const dataUtc = warDateUtc(dia, times[tipo]);
+          const time = byDow[dow]?.[tipo] ?? times[tipo]; // override do dia > base
+          const dataUtc = warDateUtc(dia, time);
           return { tipo, dia, dataUtc, fimUtc: warEndUtc(dataUtc, durs[tipo]) };
         }),
       };

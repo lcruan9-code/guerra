@@ -42,6 +42,15 @@ describe('activeDayWars', () => {
     expect(kefra.fimUtc.toISOString()).toBe(sp('2026-07-07', '20:20').toISOString());
   });
 
+  test('override por dia da semana: terça (dow=2) usa Torre 19:00', () => {
+    const byDow = { 2: { TORRE: '19:00' } };
+    const ter = activeDayWars(sp('2026-07-07', '10:00'), TIMES, { TORRE: 35, KEFRA: 20 }, byDow);
+    const seg = activeDayWars(sp('2026-07-06', '10:00'), TIMES, { TORRE: 35, KEFRA: 20 }, byDow);
+    expect(ter.wars.find((w) => w.tipo === 'TORRE')!.dataUtc.toISOString()).toBe(sp('2026-07-07', '19:00').toISOString());
+    // segunda segue a base (21:00), sem override
+    expect(seg.wars.find((w) => w.tipo === 'TORRE')!.dataUtc.toISOString()).toBe(sp('2026-07-06', '21:00').toISOString());
+  });
+
   test('terça à noite (após horários) → ainda terça (só reseta na virada)', () => {
     expect(activeDayWars(sp('2026-07-07', '23:30'), TIMES).dia).toBe('2026-07-07');
   });
