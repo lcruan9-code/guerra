@@ -79,6 +79,12 @@ ALTER TABLE events DROP CONSTRAINT IF EXISTS events_dia_key;
 ALTER TABLE events DROP CONSTRAINT IF EXISTS events_tipo_check;
 ALTER TABLE events ADD CONSTRAINT events_tipo_check CHECK (tipo IN ('TORRE','KEFRA','NOATUM'));
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_events_dia_tipo ON events(dia, tipo);
+-- Fim da guerra: Torre encerra no horário fixo (início + duração). Kefra é mob, então
+-- encerra no botão do líder ("Kefra morto") OU no fim do timer — o que vier primeiro.
+ALTER TABLE events ADD COLUMN IF NOT EXISTS fim          TIMESTAMPTZ;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS encerrado_em TIMESTAMPTZ;
+UPDATE events SET fim = data + INTERVAL '35 minutes' WHERE fim IS NULL AND tipo = 'TORRE';
+UPDATE events SET fim = data + INTERVAL '20 minutes' WHERE fim IS NULL AND tipo IN ('KEFRA','NOATUM');
 
 CREATE INDEX IF NOT EXISTS idx_confirmations_event ON confirmations(event_id);
 CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id);

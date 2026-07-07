@@ -1,11 +1,12 @@
 import { query, queryOne, withTransaction } from './db';
 import { HttpError } from './auth';
 import { ensureDayEvents, getEvent, type EventRow } from './events';
-import { getWarTimes } from './settings';
+import { getWarTimes, getWarDurations } from './settings';
 import { listAwards, getWeekMeta, type AwardKey } from './rankings';
 
 const VALID_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_DUR = 180;
 const AWARD_KEYS: AwardKey[] = ['PONTOS', 'KS_TORRE', 'KEFRA', 'PARTICIPACAO'];
 
 async function setSetting(key: string, value: string): Promise<void> {
@@ -157,6 +158,7 @@ export async function setKs(eventId: string, userId: string, value: number): Pro
 
 export interface AdminOverview {
   warTimes: { TORRE: string; KEFRA: string };
+  warDurations: { TORRE: number; KEFRA: number };
   week: { inicio: string; fim: string; texto: string };
   awards: Awaited<ReturnType<typeof listAwards>>;
   nextEvent: { id: string; tipo: string; dataIso: string; cancelado: boolean };
@@ -165,8 +167,9 @@ export interface AdminOverview {
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  const [warTimes, week, awards, dayEvents] = await Promise.all([
+  const [warTimes, warDurations, week, awards, dayEvents] = await Promise.all([
     getWarTimes(),
+    getWarDurations(),
     getWeekMeta(),
     listAwards(),
     ensureDayEvents(),
@@ -185,6 +188,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   );
   return {
     warTimes,
+    warDurations,
     week,
     awards,
     nextEvent: {
@@ -240,7 +244,21 @@ export async function listRecentEvents(limit = 16): Promise<EventListItem[]> {
   }));
 }
 
-export async function updateWarTimes(torre?: string, kefra?: string): Promise<void> {
+export interface WarTimesInput {
+  torre?: string;
+  kefra?: string;
+  durTorre?: number;
+  durKefra?: number;
+}
+
+function validDur(v: number, label: string): void {
+  if (!Number.isInteger(v) || v < 1 || v > MAX_DUR) {
+    throw new HttpError(400, `Duração do ${label} inválida (1 a ${MAX_DUR} min).`);
+  }
+}
+
+export async function updateWarTimes(input: WarTimesInput): Promise<void> {
+  const { torre, kefra, durTorre, durKefra } = input;
   if (torre !== undefined) {
     if (!VALID_TIME.test(torre)) throw new HttpError(400, 'Horário da Torre inválido (use HH:MM).');
     await setSetting('war_time_torre', torre);
@@ -248,6 +266,14 @@ export async function updateWarTimes(torre?: string, kefra?: string): Promise<vo
   if (kefra !== undefined) {
     if (!VALID_TIME.test(kefra)) throw new HttpError(400, 'Horário do Kefra inválido (use HH:MM).');
     await setSetting('war_time_kefra', kefra);
+  }
+  if (durTorre !== undefined) {
+    validDur(durTorre, 'Torre');
+    await setSetting('war_dur_torre', String(durTorre));
+  }
+  if (durKefra !== undefined) {
+    validDur(durKefra, 'Kefra');
+    await setSetting('war_dur_kefra', String(durKefra));
   }
 }
 

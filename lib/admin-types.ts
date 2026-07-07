@@ -28,6 +28,7 @@ export interface RosterEntryDTO {
 
 export interface AdminOverviewDTO {
   warTimes: { TORRE: string; KEFRA: string };
+  warDurations: { TORRE: number; KEFRA: number };
   week: { inicio: string; fim: string; texto: string };
   awards: AwardDTO[];
   nextEvent: { id: string; tipo: string; dataIso: string; cancelado: boolean };

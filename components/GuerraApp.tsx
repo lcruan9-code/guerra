@@ -10,7 +10,9 @@ export interface WarDTO {
   id: string;
   tipo: WarTipo;
   dataIso: string;
-  locked: boolean;
+  endsIso: string | null;
+  locked: boolean; // já começou (confirmações travadas)
+  ended: boolean; // já encerrou (fim automático ou "Kefra morto")
   myConfirmation: { status: ConfirmStatus; characterId: string | null } | null;
 }
 

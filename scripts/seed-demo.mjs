@@ -94,7 +94,10 @@ for (let i = 0; i < 7; i++) {
   for (const tipo of tipos) {
     const id = randomUUID();
     const hora = tipo === 'KEFRA' ? '20:00' : '21:00';
-    await client.query(`INSERT INTO events (id, tipo, data, dia) VALUES ($1,$2,$3,$4)`, [id, tipo, warAt(dia, hora), dia]);
+    const inicio = warAt(dia, hora);
+    const durMin = tipo === 'TORRE' ? 35 : 20;
+    const fim = new Date(Date.parse(inicio) + durMin * 60000).toISOString();
+    await client.query(`INSERT INTO events (id, tipo, data, dia, fim) VALUES ($1,$2,$3,$4,$5)`, [id, tipo, inicio, dia, fim]);
     events.push({ id, dia, tipo, past: dia < hoje, today: dia === hoje });
   }
 }

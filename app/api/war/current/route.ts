@@ -1,6 +1,6 @@
 import { requireUser, toResponse } from '@/lib/auth';
 import { hasLeaderAccess } from '@/lib/leader-auth';
-import { ensureDayEvents } from '@/lib/events';
+import { ensureDayEvents, isEventEnded } from '@/lib/events';
 import { getMyConfirmation, getUserPoints } from '@/lib/war';
 import { listCharacters } from '@/lib/characters';
 
@@ -14,6 +14,7 @@ export async function GET(): Promise<Response> {
       getUserPoints(user.id),
       hasLeaderAccess(),
     ]);
+    const nowDate = new Date(now);
     const wars = await Promise.all(
       events.map(async (event) => {
         const mine = await getMyConfirmation(user.id, event.id);
@@ -21,7 +22,9 @@ export async function GET(): Promise<Response> {
           id: event.id,
           tipo: event.tipo,
           dataIso: new Date(event.data).toISOString(),
+          endsIso: event.fim ? new Date(event.fim).toISOString() : null,
           locked: now >= new Date(event.data).getTime(),
+          ended: isEventEnded(event, nowDate),
           myConfirmation: mine ? { status: mine.status, characterId: mine.character_id } : null,
         };
       }),

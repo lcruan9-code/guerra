@@ -158,6 +158,11 @@ input::placeholder { color: #6b6253; }
 /* ---------------- LEADER PANEL ---------------- */
 .leader-panel { margin-top: 20px; border-radius: 12px; padding: 18px; background: linear-gradient(180deg, rgba(28, 22, 18, .9), rgba(16, 12, 9, .96)); border: 1px solid rgba(255, 122, 46, .3); }
 .leader-title { font-family: var(--font-cinzel), serif; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.btn-kefra-morto { width: 100%; margin-bottom: 14px; padding: 14px; border-radius: 10px; border: 1px solid rgba(214, 51, 46, .55); background: linear-gradient(180deg, rgba(214, 51, 46, .22), rgba(120, 20, 18, .3)); color: #ffcdc4; font-weight: 800; font-size: 15px; letter-spacing: .04em; cursor: pointer; transition: transform .12s ease, box-shadow .15s ease; }
+.btn-kefra-morto:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 30px -14px rgba(214, 51, 46, .7); }
+.btn-kefra-morto:disabled { opacity: .55; cursor: default; }
+.kefra-done-hint { margin-bottom: 14px; padding: 11px 12px; border-radius: 8px; background: rgba(212, 178, 90, .08); border: 1px solid rgba(212, 178, 90, .22); color: #cdbf9e; font-size: 13px; }
+.kefra-done-hint a { color: var(--accent); font-weight: 700; }
 .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .alert { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 8px; background: rgba(214, 51, 46, .12); border: 1px solid rgba(214, 51, 46, .3); color: #ff9a8a; font-size: 13px; font-weight: 600; }
 .comp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }

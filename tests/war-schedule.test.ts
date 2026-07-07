@@ -34,6 +34,14 @@ describe('activeDayWars', () => {
     expect(kefra.dataUtc.toISOString()).toBe(sp('2026-07-07', '20:00').toISOString());
   });
 
+  test('fim = início + duração (Torre 35min, Kefra 20min por padrão)', () => {
+    const d = activeDayWars(sp('2026-07-07', '10:00'), TIMES, { TORRE: 35, KEFRA: 20 });
+    const torre = d.wars.find((w) => w.tipo === 'TORRE')!;
+    const kefra = d.wars.find((w) => w.tipo === 'KEFRA')!;
+    expect(torre.fimUtc.toISOString()).toBe(sp('2026-07-07', '21:35').toISOString());
+    expect(kefra.fimUtc.toISOString()).toBe(sp('2026-07-07', '20:20').toISOString());
+  });
+
   test('terça à noite (após horários) → ainda terça (só reseta na virada)', () => {
     expect(activeDayWars(sp('2026-07-07', '23:30'), TIMES).dia).toBe('2026-07-07');
   });

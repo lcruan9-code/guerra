@@ -59,6 +59,16 @@ export default function WarBlock({ war, characters, leaderUnlocked, reloadCurren
     setPicking(true);
   }
 
+  async function finalizeWar() {
+    setError(null);
+    try {
+      await api(`/api/war/${war.id}/finalize`, { method: 'POST' });
+      await Promise.all([reloadCurrent(), loadLists()]);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Erro ao encerrar a guerra.');
+    }
+  }
+
   const preselected = war.myConfirmation?.characterId ?? characters.find((c) => c.principal)?.id ?? null;
 
   const dataLocal = new Date(war.dataIso).toLocaleString('pt-BR', {
@@ -78,10 +88,12 @@ export default function WarBlock({ war, characters, leaderUnlocked, reloadCurren
         <div className="war-kicker">{war.tipo === 'KEFRA' ? 'Evento da semana' : 'Próxima guerra'}</div>
         <h1 className="war-title">{TIPO_LABELS[war.tipo]}</h1>
         <div className="war-when">{dataLocal}</div>
-        <Countdown targetIso={war.dataIso} />
+        <Countdown targetIso={war.dataIso} ended={war.ended} />
       </section>
 
-      {war.locked ? (
+      {war.ended ? (
+        <p className="locked-banner">🏁 Guerra encerrada.</p>
+      ) : war.locked ? (
         <p className="locked-banner">⚔️ Em andamento — confirmações encerradas.</p>
       ) : (
         <div className="war-choices">
@@ -99,7 +111,15 @@ export default function WarBlock({ war, characters, leaderUnlocked, reloadCurren
       {error && <p className="error-text" style={{ marginTop: 12, textAlign: 'center' }}>{error}</p>}
 
       {leaderUnlocked && (
-        <LeaderPanel eventId={war.id} locked={war.locked} lists={lists} onParticipationChanged={loadLists} />
+        <LeaderPanel
+          eventId={war.id}
+          tipo={war.tipo}
+          locked={war.locked}
+          ended={war.ended}
+          lists={lists}
+          onParticipationChanged={loadLists}
+          onFinalize={finalizeWar}
+        />
       )}
 
       <div style={{ marginTop: 8 }}>

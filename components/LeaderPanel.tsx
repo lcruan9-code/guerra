@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { CLASSE_COLOR } from '@/lib/brand';
-import type { Classe, WarListsDTO } from '@/lib/types';
+import type { Classe, WarListsDTO, WarTipo } from '@/lib/types';
 import WarLists from './WarLists';
 
 const POLL_MS = 8000;
@@ -12,13 +12,29 @@ type SummaryFlat = Record<string, number | string[]> & { alerts: string[] };
 
 interface Props {
   eventId: string;
+  tipo: WarTipo;
   locked: boolean;
+  ended: boolean;
   lists: WarListsDTO;
   onParticipationChanged: () => Promise<void>;
+  onFinalize: () => Promise<void>;
 }
 
-export default function LeaderPanel({ eventId, locked, lists, onParticipationChanged }: Props) {
+export default function LeaderPanel({ eventId, tipo, locked, ended, lists, onParticipationChanged, onFinalize }: Props) {
   const [summary, setSummary] = useState<SummaryFlat | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
+
+  // Kefra é mob: enquanto está viva o líder pode encerrar ("Kefra morto").
+  const podeFinalizarKefra = tipo === 'KEFRA' && locked && !ended;
+
+  async function finalize() {
+    setFinalizing(true);
+    try {
+      await onFinalize();
+    } finally {
+      setFinalizing(false);
+    }
+  }
 
   const loadSummary = useCallback(async () => {
     try {
@@ -55,6 +71,17 @@ export default function LeaderPanel({ eventId, locked, lists, onParticipationCha
   return (
     <section className="leader-panel">
       <h2 className="leader-title">⚑ Visão do líder</h2>
+
+      {podeFinalizarKefra && (
+        <button className="btn-kefra-morto" onClick={finalize} disabled={finalizing}>
+          {finalizing ? 'Encerrando…' : '☠️ Kefra morto — encerrar'}
+        </button>
+      )}
+      {tipo === 'KEFRA' && ended && (
+        <p className="kefra-done-hint">
+          🏁 Kefra encerrado. Marque quem deu o KS no <a href="/admin">Painel ⚙️</a> (aba Guerra → Presença &amp; KS).
+        </p>
+      )}
 
       {summary.alerts.length > 0 && (
         <div className="alerts">
