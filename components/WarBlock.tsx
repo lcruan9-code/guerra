@@ -25,19 +25,22 @@ export default function WarBlock({ war, characters, leaderUnlocked, reloadCurren
   const [showLists, setShowLists] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // A lista de presença é visível só para o líder — só ele carrega/atualiza.
   const loadLists = useCallback(async () => {
+    if (!leaderUnlocked) return;
     try {
       setLists(await api<WarListsDTO>(`/api/war/${war.id}/list`));
     } catch {
       // polling: falha silenciosa
     }
-  }, [war.id]);
+  }, [war.id, leaderUnlocked]);
 
   useEffect(() => {
+    if (!leaderUnlocked) return;
     void loadLists();
     const t = setInterval(() => void loadLists(), POLL_MS);
     return () => clearInterval(t);
-  }, [loadLists]);
+  }, [loadLists, leaderUnlocked]);
 
   async function send(status: ConfirmStatus, characterId: string | null) {
     setError(null);
@@ -123,26 +126,28 @@ export default function WarBlock({ war, characters, leaderUnlocked, reloadCurren
         />
       )}
 
-      <div className="lists-collapse">
-        <button
-          className="lists-toggle"
-          onClick={() => setShowLists((v) => !v)}
-          aria-expanded={showLists}
-        >
-          <span className="lists-toggle-label">👥 Quem marcou</span>
-          <span className="lists-counts">
-            <span className="lc vou">✅ {lists.vou.length}</span>
-            <span className="lc talvez">⏳ {lists.talvez.length}</span>
-            <span className="lc nao">❌ {lists.nao_vou.length}</span>
-          </span>
-          <span className={`lists-chevron${showLists ? ' open' : ''}`}>▾</span>
-        </button>
-        {showLists && (
-          <div style={{ marginTop: 10 }}>
-            <WarLists lists={lists} />
-          </div>
-        )}
-      </div>
+      {leaderUnlocked && (
+        <div className="lists-collapse">
+          <button
+            className="lists-toggle"
+            onClick={() => setShowLists((v) => !v)}
+            aria-expanded={showLists}
+          >
+            <span className="lists-toggle-label">👥 Quem marcou</span>
+            <span className="lists-counts">
+              <span className="lc vou">✅ {lists.vou.length}</span>
+              <span className="lc talvez">⏳ {lists.talvez.length}</span>
+              <span className="lc nao">❌ {lists.nao_vou.length}</span>
+            </span>
+            <span className={`lists-chevron${showLists ? ' open' : ''}`}>▾</span>
+          </button>
+          {showLists && (
+            <div style={{ marginTop: 10 }}>
+              <WarLists lists={lists} />
+            </div>
+          )}
+        </div>
+      )}
 
       {picking && (
         <CharPicker
