@@ -22,6 +22,7 @@ interface Props {
 export default function WarBlock({ war, characters, leaderUnlocked, reloadCurrent }: Props) {
   const [lists, setLists] = useState<WarListsDTO>({ vou: [], talvez: [], nao_vou: [] });
   const [picking, setPicking] = useState(false);
+  const [showLists, setShowLists] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadLists = useCallback(async () => {
@@ -122,8 +123,25 @@ export default function WarBlock({ war, characters, leaderUnlocked, reloadCurren
         />
       )}
 
-      <div style={{ marginTop: 8 }}>
-        <WarLists lists={lists} />
+      <div className="lists-collapse">
+        <button
+          className="lists-toggle"
+          onClick={() => setShowLists((v) => !v)}
+          aria-expanded={showLists}
+        >
+          <span className="lists-toggle-label">👥 Quem marcou</span>
+          <span className="lists-counts">
+            <span className="lc vou">✅ {lists.vou.length}</span>
+            <span className="lc talvez">⏳ {lists.talvez.length}</span>
+            <span className="lc nao">❌ {lists.nao_vou.length}</span>
+          </span>
+          <span className={`lists-chevron${showLists ? ' open' : ''}`}>▾</span>
+        </button>
+        {showLists && (
+          <div style={{ marginTop: 10 }}>
+            <WarLists lists={lists} />
+          </div>
+        )}
       </div>
 
       {picking && (
