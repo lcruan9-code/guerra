@@ -7,3 +7,15 @@ out/
 next-env.d.ts
 
 .vercel
+*.rar
+*.zip
+*.log
+*.tmp
+*.bak
+dist/
+build/
+.vercel/
+.env
+.env.local
+.claude/
+/node_modules/@next/swc-win32-x64-msvc/next-swc.win32-x64-msvc.node
