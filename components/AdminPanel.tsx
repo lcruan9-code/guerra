@@ -13,8 +13,17 @@ function dayLabel(dia: string): string {
   return `${DIAS[dow]} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}`;
 }
 
-type Tab = 'guerra' | 'premios' | 'jogadores';
+type Tab = 'guerra' | 'premios' | 'jogadores' | 'forca';
 type Gate = 'loading' | 'locked' | 'nologin' | 'ok';
+
+interface GearRankEntry {
+  userNome: string;
+  personagem: string;
+  classe: string;
+  especializacao: string;
+  score: number;
+  breakdown: { key: string; label: string; pontos: number }[];
+}
 
 export default function AdminPanel() {
   const [data, setData] = useState<AdminOverviewDTO | null>(null);
@@ -83,11 +92,13 @@ export default function AdminPanel() {
         <button className={`tab-btn${tab === 'guerra' ? ' active' : ''}`} onClick={() => setTab('guerra')}>Guerra</button>
         <button className={`tab-btn${tab === 'premios' ? ' active' : ''}`} onClick={() => setTab('premios')}>Premiações</button>
         <button className={`tab-btn${tab === 'jogadores' ? ' active' : ''}`} onClick={() => setTab('jogadores')}>Jogadores</button>
+        <button className={`tab-btn${tab === 'forca' ? ' active' : ''}`} onClick={() => setTab('forca')}>Força</button>
       </div>
 
       {tab === 'guerra' && <GuerraTab data={data} reload={load} />}
       {tab === 'premios' && <PremiosTab data={data} reload={load} />}
       {tab === 'jogadores' && <JogadoresTab data={data} />}
+      {tab === 'forca' && <ForcaTab />}
     </div>
   );
 }
@@ -542,5 +553,49 @@ function JogadoresTab({ data }: { data: AdminOverviewDTO }) {
         </table>
       </div>
     </section>
+  );
+}
+
+/* ---------------- FORÇA (ranking de gear score) ---------------- */
+function ForcaTab() {
+  const [rows, setRows] = useState<GearRankEntry[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState<number | null>(null);
+
+  useEffect(() => {
+    api<GearRankEntry[]>('/api/admin/gear')
+      .then(setRows)
+      .catch((e) => setErr(e instanceof ApiError ? e.message : 'Erro ao carregar.'));
+  }, []);
+
+  if (err) return <p className="error-text">{err}</p>;
+  if (!rows) return <p className="muted">Carregando…</p>;
+  if (rows.length === 0) return <p className="muted">Nenhum personagem com equipamento ainda.</p>;
+
+  return (
+    <div className="admin-card">
+      <h2>Ranking de força</h2>
+      <div className="gear-rank">
+        {rows.map((r, i) => (
+          <div key={`${r.userNome}-${r.personagem}-${i}`}>
+            <button className="gear-rank-row" onClick={() => setOpen(open === i ? null : i)}>
+              <span className="gear-pos">{i + 1}</span>
+              <span className="gear-who">
+                <span className="gear-pj">{r.personagem}</span>
+                <span className="gear-sub">{r.userNome} · {r.classe} {r.especializacao}</span>
+              </span>
+              <span className="gear-score">{r.score}<em>/48</em></span>
+            </button>
+            {open === i && (
+              <div className="gear-detail">
+                {r.breakdown.map((b) => (
+                  <span key={b.key} className="gear-chip">{b.label}: <strong>{b.pontos}</strong></span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

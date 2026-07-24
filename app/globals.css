@@ -339,3 +339,18 @@ input::placeholder { color: #6b6253; }
 
 .equip-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
 .equip-row-score { font-size: 13px; color: var(--gold); font-weight: 700; }
+
+/* ── Ranking de força (painel) ────────────────────────────────── */
+.gear-rank { display: flex; flex-direction: column; gap: 6px; }
+.gear-rank-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(212,178,90,.16); border-radius: 8px;
+  padding: 10px 12px; cursor: pointer; color: var(--text); }
+.gear-rank-row:hover { border-color: var(--accent); }
+.gear-pos { font-family: var(--font-cinzel), serif; font-size: 16px; color: var(--gold); min-width: 20px; }
+.gear-who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.gear-pj { font-weight: 700; color: #f0e6d2; }
+.gear-sub { font-size: 11px; color: var(--muted); }
+.gear-score { font-family: var(--font-cinzel), serif; font-weight: 800; font-size: 18px; color: var(--accent); }
+.gear-score em { font-size: 12px; color: var(--muted); font-style: normal; }
+.gear-detail { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 4px; }
+.gear-chip { font-size: 11px; color: var(--muted); background: rgba(0,0,0,.25); border-radius: 6px; padding: 3px 7px; }
