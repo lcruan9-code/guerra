@@ -3,6 +3,8 @@ import { HttpError } from './auth';
 import { ensureDayEvents, getEvent, resyncFutureEvents, type EventRow } from './events';
 import { getWarTimes, getWarDurations, getWarDowOverrides } from './settings';
 import { listAwards, getWeekMeta, type AwardKey } from './rankings';
+import { gearScore, slotBreakdown, type SlotScore } from './gear';
+import type { Equipment } from './types';
 
 const VALID_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -354,3 +356,32 @@ export async function setParticipation(
 }
 
 export type { EventRow };
+
+export interface GearRankEntry {
+  userNome: string;
+  personagem: string;
+  classe: string;
+  especializacao: string;
+  score: number;
+  breakdown: SlotScore[];
+}
+
+// Todos os personagens ordenados por gear score (maior primeiro). Para o líder
+// montar a composição da guerra.
+export async function gearRanking(): Promise<GearRankEntry[]> {
+  const rows = await query<{
+    userNome: string; personagem: string; classe: string;
+    especializacao: string; equipment: Equipment | null;
+  }>(
+    `SELECT u.nome AS "userNome", ch.nome AS personagem, ch.classe,
+            ch.especializacao, ch.equipment
+     FROM characters ch JOIN users u ON u.id = ch.user_id`,
+  );
+  return rows
+    .map((r) => ({
+      userNome: r.userNome, personagem: r.personagem, classe: r.classe,
+      especializacao: r.especializacao,
+      score: gearScore(r.equipment), breakdown: slotBreakdown(r.equipment),
+    }))
+    .sort((a, b) => b.score - a.score);
+}
