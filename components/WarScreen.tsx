@@ -9,6 +9,8 @@ import CharacterForm from './CharacterForm';
 import RankingSheet from './RankingSheet';
 import LeaderUnlockCard from './LeaderUnlockCard';
 import WarBlock from './WarBlock';
+import EquipmentGrid from './EquipmentGrid';
+import type { CharacterDTO } from '@/lib/types';
 
 export default function WarScreen({ data, reload }: { data: CurrentData; reload: () => Promise<void> }) {
   const { user, characters, leaderUnlocked, wars } = data;
@@ -16,6 +18,7 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
   const [ranking, setRanking] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [equipChar, setEquipChar] = useState<CharacterDTO | null>(null);
 
   return (
     <div className="app-wrap">
@@ -124,6 +127,10 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
             {characters.map((c) => (
               <div key={c.id} className="manage-block">
                 <CharacterForm initial={c} onSaved={() => { setManaging(false); void reload(); }} />
+                <div className="equip-row">
+                  <span className="equip-row-score">⚔️ Gear {c.score ?? 0}/48</span>
+                  <button className="btn-ghost" onClick={() => setEquipChar(c)}>SET</button>
+                </div>
               </div>
             ))}
             {characters.length < 2 && (
@@ -135,6 +142,14 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
             <button onClick={() => setManaging(false)} className="btn-ghost full" style={{ marginTop: 4 }}>
               Fechar
             </button>
+
+            {equipChar && (
+              <EquipmentGrid
+                character={equipChar}
+                onClose={() => setEquipChar(null)}
+                onSaved={() => { setEquipChar(null); void reload(); }}
+              />
+            )}
           </div>
         </div>
       )}

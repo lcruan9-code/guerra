@@ -309,3 +309,33 @@ input::placeholder { color: #6b6253; }
 .rank-me { text-align: center; margin-top: 4px; padding: 14px; border-radius: 10px; background: rgba(255, 122, 46, .08); border: 1px solid rgba(255, 122, 46, .25); }
 .rank-me .big { font-family: var(--font-cinzel), serif; font-size: 26px; font-weight: 800; color: var(--accent-bright); }
 .rank-me .lbl { font-size: 12px; letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+
+/* ── Tela do SET (grade estilo WYD) ───────────────────────────── */
+.equip-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.equip-score { font-family: var(--font-cinzel), serif; font-size: 26px; font-weight: 800; color: var(--gold); }
+.equip-score span { font-size: 15px; color: var(--muted); }
+.equip-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-areas:
+    "pet    cythera capa   runa"
+    "amu1   armadura arma  escudo"
+    "amu2   calca   luvas  botas"
+    "amu3   anel    brinco cinto";
+}
+.equip-slot {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  aspect-ratio: 1 / 1; padding: 4px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(26,20,16,.95), rgba(14,10,8,.97));
+  border: 1px solid rgba(212,178,90,.28); border-radius: 8px;
+  color: var(--text); transition: transform .12s ease, border-color .15s ease;
+}
+.equip-slot:hover { border-color: var(--accent); transform: translateY(-1px); }
+.equip-slot-label { font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.equip-slot-val { font-weight: 800; font-size: 13px; color: #f0e6d2; text-align: center; }
+.equip-slot-pts { font-size: 9px; color: var(--accent); }
+.equip-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.equip-sheet { max-width: 480px; }
+
+.equip-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.equip-row-score { font-size: 13px; color: var(--gold); font-weight: 700; }
