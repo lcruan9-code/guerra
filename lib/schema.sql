@@ -85,6 +85,8 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS fim          TIMESTAMPTZ;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS encerrado_em TIMESTAMPTZ;
 UPDATE events SET fim = data + INTERVAL '35 minutes' WHERE fim IS NULL AND tipo = 'TORRE';
 UPDATE events SET fim = data + INTERVAL '20 minutes' WHERE fim IS NULL AND tipo IN ('KEFRA','NOATUM');
+-- Equipamento do personagem (set inteiro num JSON). Gear score é derivado.
+ALTER TABLE characters ADD COLUMN IF NOT EXISTS equipment JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_confirmations_event ON confirmations(event_id);
 CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(user_id);

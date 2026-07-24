@@ -1,7 +1,8 @@
 import { query, queryOne, withTransaction, newId } from './db';
 import { HttpError } from './auth';
 import { isValidCombo } from './wyd';
-import type { CharacterDTO, SessionUser } from './types';
+import { gearScore, parseEquipment } from './gear';
+import type { CharacterDTO, Equipment, SessionUser } from './types';
 
 const MAX_CHARS = 2;
 
@@ -61,11 +62,19 @@ export async function registerWithFirstCharacter(input: CharacterInput): Promise
 }
 
 export async function listCharacters(userId: string): Promise<CharacterDTO[]> {
-  return query<CharacterDTO>(
-    `SELECT id, nome, classe, especializacao, principal
+  const rows = await query<{
+    id: string; nome: string; classe: CharacterDTO['classe'];
+    especializacao: CharacterDTO['especializacao']; principal: boolean;
+    equipment: Equipment | null;
+  }>(
+    `SELECT id, nome, classe, especializacao, principal, equipment
      FROM characters WHERE user_id = $1 ORDER BY created_at`,
     [userId],
   );
+  return rows.map((r) => ({
+    id: r.id, nome: r.nome, classe: r.classe, especializacao: r.especializacao,
+    principal: r.principal, equipment: r.equipment, score: gearScore(r.equipment),
+  }));
 }
 
 export async function createCharacter(userId: string, input: CharacterInput): Promise<CharacterDTO> {
@@ -106,4 +115,19 @@ export async function updateCharacter(userId: string, id: string, input: Charact
     }
     return row;
   });
+}
+
+export async function updateEquipment(userId: string, id: string, input: unknown): Promise<{ score: number }> {
+  let eq: Equipment;
+  try {
+    eq = parseEquipment(input);
+  } catch (e) {
+    throw new HttpError(400, e instanceof Error ? e.message : 'Equipamento inválido.');
+  }
+  const rows = await query<{ id: string }>(
+    `UPDATE characters SET equipment = $3 WHERE id = $1 AND user_id = $2 RETURNING id`,
+    [id, userId, JSON.stringify(eq)],
+  );
+  if (!rows[0]) throw new HttpError(404, 'Personagem não encontrado.');
+  return { score: gearScore(eq) };
 }
