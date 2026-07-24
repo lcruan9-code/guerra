@@ -10,6 +10,7 @@ import RankingSheet from './RankingSheet';
 import LeaderUnlockCard from './LeaderUnlockCard';
 import WarBlock from './WarBlock';
 import EquipmentGrid from './EquipmentGrid';
+import { GEAR_MAX } from '@/lib/gear';
 import type { CharacterDTO } from '@/lib/types';
 
 export default function WarScreen({ data, reload }: { data: CurrentData; reload: () => Promise<void> }) {
@@ -128,7 +129,7 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
               <div key={c.id} className="manage-block">
                 <CharacterForm initial={c} onSaved={() => { setManaging(false); void reload(); }} />
                 <div className="equip-row">
-                  <span className="equip-row-score">⚔️ Gear {c.score ?? 0}/48</span>
+                  <span className="equip-row-score">⚔️ Gear {c.score ?? 0}/{GEAR_MAX}</span>
                   <button className="btn-ghost" onClick={() => setEquipChar(c)}>SET</button>
                 </div>
               </div>
