@@ -356,8 +356,16 @@ input::placeholder { color: #6b6253; }
 .equip-setval { font-size: 9px; font-weight: 800; color: var(--gold); text-align: center; line-height: 1.1; }
 .equip-opts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 
-.equip-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-.equip-row-score { font-size: 13px; color: var(--gold); font-weight: 700; }
+.equip-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(212,178,90,.14); }
+.equip-row-score { font-size: 14px; color: var(--gold); font-weight: 800; }
+.btn-set {
+  background: linear-gradient(180deg, #ffb347, #f2591a); border: 1px solid var(--accent-bright);
+  color: #1f0a02; font-weight: 800; letter-spacing: .04em; font-size: 14px;
+  padding: 11px 20px; border-radius: 9px; cursor: pointer;
+  box-shadow: 0 6px 16px -8px rgba(255,122,46,.75); transition: transform .12s ease, box-shadow .15s ease;
+}
+.btn-set:hover { transform: translateY(-1px); box-shadow: 0 10px 24px -8px rgba(255,122,46,.9); }
+.btn-set:active { transform: scale(.97); }
 .muted { color: var(--muted); }
 
 /* ── Ranking de força (painel) ────────────────────────────────── */

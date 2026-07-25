@@ -130,7 +130,7 @@ export default function WarScreen({ data, reload }: { data: CurrentData; reload:
                 <CharacterForm initial={c} onSaved={() => { setManaging(false); void reload(); }} />
                 <div className="equip-row">
                   <span className="equip-row-score">⚔️ Gear {c.score ?? 0}/{GEAR_MAX}</span>
-                  <button className="btn-ghost" onClick={() => setEquipChar(c)}>SET</button>
+                  <button className="btn-set" onClick={() => setEquipChar(c)}>⚔️ Montar SET</button>
                 </div>
               </div>
             ))}
