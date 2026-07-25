@@ -11,36 +11,36 @@ interface SlotDef {
   key: string;
   label: string;
   kind: Kind;
-  area: string; // grid-area (layout estilo janela de Equipamento do WYD)
+  area: string; // grid-area (layout espelhando a janela de Equipamento do WYD)
 }
 
-// Layout espelhando a janela de Equipamento do WYD: montaria/elmo/capa/runa no
-// topo, arma/escudo/set ao centro, amuletos na coluna esquerda, acessórios à direita.
+// Layout aproximando a janela do jogo: montaria/elmo/runa/capa no topo,
+// arma/peito/escudo ao centro, acessórios/amuletos nas laterais e base.
 const SLOTS: SlotDef[] = [
   { key: 'pet', label: 'Pet', kind: 'pet', area: 'pet' },
   { key: 'cythera', label: 'Cythera', kind: 'refinoAdd', area: 'cythera' },
-  { key: 'capa', label: 'Capa', kind: 'capa', area: 'capa' },
   { key: 'runa', label: 'Runa', kind: 'runa', area: 'runa' },
-  { key: 'amuleto1', label: 'Amuleto', kind: 'add', area: 'amu1' },
+  { key: 'capa', label: 'Capa', kind: 'capa', area: 'capa' },
   { key: 'arma', label: 'Arma', kind: 'refino', area: 'arma' },
+  { key: 'armadura', label: 'Peito', kind: 'refino', area: 'peito' },
   { key: 'escudo', label: 'Escudo', kind: 'refino', area: 'escudo' },
   { key: 'anel', label: 'Anel', kind: 'tipo', area: 'anel' },
-  { key: 'amuleto2', label: 'Amuleto', kind: 'add', area: 'amu2' },
-  { key: 'armadura', label: 'Armadura', kind: 'refino', area: 'armadura' },
-  { key: 'luvas', label: 'Luvas', kind: 'refino', area: 'luvas' },
   { key: 'brinco', label: 'Brinco', kind: 'tipo', area: 'brinco' },
-  { key: 'amuleto3', label: 'Amuleto', kind: 'add', area: 'amu3' },
+  { key: 'luvas', label: 'Luva', kind: 'refino', area: 'luvas' },
   { key: 'calca', label: 'Calça', kind: 'refino', area: 'calca' },
-  { key: 'botas', label: 'Botas', kind: 'refino', area: 'botas' },
+  { key: 'amuleto1', label: 'Amuleto', kind: 'add', area: 'amu1' },
+  { key: 'amuleto2', label: 'Amuleto', kind: 'add', area: 'amu2' },
   { key: 'cinto', label: 'Cinto', kind: 'tipo', area: 'cinto' },
+  { key: 'botas', label: 'Bota', kind: 'refino', area: 'botas' },
+  { key: 'amuleto3', label: 'Amuleto', kind: 'add', area: 'amu3' },
 ];
 
-// Ícone por slot (aproximação — não temos os ícones do jogo).
-const ICON: Record<string, string> = {
-  pet: '🐴', cythera: '👑', capa: '🧥', runa: '🔱',
-  arma: '🗡️', escudo: '🛡️', armadura: '🦺', calca: '👖', luvas: '🧤', botas: '🥾',
-  amuleto1: '💎', amuleto2: '💎', amuleto3: '💎', anel: '💍', brinco: '📿', cinto: '🎗️',
-};
+// Ícones recortados da janela real do WYD (public/equip/<key>.png). Escudo veio
+// vazio no print → sem imagem (tile placeholder).
+const NO_ICON = new Set(['escudo']);
+function iconSrc(key: string): string | null {
+  return NO_ICON.has(key) ? null : `/equip/${key}.png`;
+}
 
 // ── leitura/escrita imutável do valor de cada slot ────────────────
 function amuIndex(key: string): number {
@@ -52,20 +52,19 @@ function setAmu(eq: Equipment, i: number, v: AddTier | null): Equipment {
   return { ...eq, amuletos: arr };
 }
 
-// Valor exibido no canto do slot (refino/tipo/lvl). '' = slot vazio.
+// Valor escolhido pelo jogador (refino/tipo/lvl). '' = slot não preenchido.
 function slotValue(eq: Equipment, s: SlotDef): string {
   const ref = (r?: number | null) => (r ? `+${r}` : '');
   switch (s.kind) {
-    case 'pet': return eq.pet ? `L${eq.pet}` : '';
+    case 'pet': return eq.pet ? `lvl ${eq.pet}` : '';
     case 'refinoAdd': return ref(eq.cythera?.refino);
     case 'capa': return eq.capa?.refino ? `+${eq.capa.refino}` : (eq.capa?.add ? '+0' : '');
-    case 'runa': return ref(eq.runa?.refino);
+    case 'runa': return eq.runa?.refino ? `+${eq.runa.refino}` : '';
     case 'add': { const v = eq.amuletos?.[amuIndex(s.key)]; return v ? '+9' : ''; }
     case 'tipo': { const v = eq[s.key as 'anel' | 'brinco' | 'cinto']; return v ?? ''; }
     default: { const v = eq[s.key as 'arma' | 'escudo' | 'armadura' | 'calca' | 'luvas' | 'botas']; return ref(v?.refino); }
   }
 }
-// Add (sux/semi/full) exibido no canto oposto, só onde faz sentido.
 function slotAdd(eq: Equipment, s: SlotDef): string {
   const a = (t?: AddTier | null) => (t ? t.toLowerCase() : '');
   switch (s.kind) {
@@ -76,7 +75,6 @@ function slotAdd(eq: Equipment, s: SlotDef): string {
   }
 }
 
-// botões de opção genéricos
 function Opts<T extends string | number | null>({ value, opts, onPick }: {
   value: T; opts: [string, T][]; onPick: (v: T) => void;
 }) {
@@ -136,19 +134,22 @@ export default function EquipmentGrid({ character, onClose, onSaved }: {
               const val = slotValue(eq, s);
               const add = slotAdd(eq, s);
               const pts = bySlot.get(s.key) ?? 0;
+              const src = iconSrc(s.key);
+              const set = val !== '';
               return (
                 <div key={s.key} className="equip-cell" style={{ gridArea: s.area }}>
                   <button
-                    className={`equip-slot${val ? '' : ' empty'}`}
+                    className={`equip-slot${set ? '' : ' unset'}`}
                     onClick={() => setEditing(s)}
-                    aria-label={`${s.label}${val ? ` ${val}` : ''}`}
+                    aria-label={`${s.label}${val ? ` ${val}` : ' (não preenchido)'}`}
                   >
-                    <span className="equip-ico" aria-hidden="true">{ICON[s.key]}</span>
-                    {val && <span className="equip-ref">{val}</span>}
-                    {add && <span className="equip-add">{add}</span>}
+                    {src
+                      ? <img className="equip-img" src={src} alt="" draggable={false} />
+                      : <span className="equip-img-empty">escudo</span>}
                     <span className={`equip-pts${pts ? '' : ' zero'}`}>{pts}</span>
                   </button>
                   <span className="equip-name">{s.label}</span>
+                  <span className="equip-setval">{set ? `${val}${add ? ` ${add}` : ''}` : '—'}</span>
                 </div>
               );
             })}
