@@ -37,9 +37,13 @@ const SLOTS: SlotDef[] = [
 
 // Ícones recortados da janela real do WYD (public/equip/<key>.png). Escudo veio
 // vazio no print → sem imagem (tile placeholder).
-const NO_ICON = new Set(['escudo']);
-function iconSrc(key: string): string | null {
-  return NO_ICON.has(key) ? null : `/equip/${key}.png`;
+// Escudo veio vazio no print → sem imagem. Arma varia pela classe (arco/mago) e
+// brinco pelo tier (T1/T2), usando os recortes fornecidos.
+function iconSrc(s: SlotDef, eq: Equipment, classe: string): string | null {
+  if (s.key === 'escudo') return null;
+  if (s.key === 'arma') return `/equip/arma-${classe === 'FM' ? 'mago' : 'arco'}.png`;
+  if (s.key === 'brinco') return `/equip/brinco-${eq.brinco === 'T2' ? 't2' : 't1'}.png`;
+  return `/equip/${s.key}.png`;
 }
 
 // ── leitura/escrita imutável do valor de cada slot ────────────────
@@ -134,7 +138,7 @@ export default function EquipmentGrid({ character, onClose, onSaved }: {
               const val = slotValue(eq, s);
               const add = slotAdd(eq, s);
               const pts = bySlot.get(s.key) ?? 0;
-              const src = iconSrc(s.key);
+              const src = iconSrc(s, eq, character.classe);
               const set = val !== '';
               return (
                 <div key={s.key} className="equip-cell" style={{ gridArea: s.area }}>
