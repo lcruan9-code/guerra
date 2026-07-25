@@ -57,7 +57,7 @@ export function slotBreakdown(eq: Equipment | null | undefined): SlotScore[] {
     { key: 'amuleto1', label: 'Amuleto 1', pontos: addPts(amu[0]) },
     { key: 'amuleto2', label: 'Amuleto 2', pontos: addPts(amu[1]) },
     { key: 'amuleto3', label: 'Amuleto 3', pontos: addPts(amu[2]) },
-    { key: 'anel', label: 'Anel', pontos: tipoPts(e.anel) },
+    { key: 'anel', label: 'Colar', pontos: tipoPts(e.anel) },
     { key: 'brinco', label: 'Brinco', pontos: tipoPts(e.brinco) },
     { key: 'cinto', label: 'Cinto', pontos: tipoPts(e.cinto) },
   ];

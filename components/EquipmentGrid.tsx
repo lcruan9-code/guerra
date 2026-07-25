@@ -24,7 +24,7 @@ const SLOTS: SlotDef[] = [
   { key: 'arma', label: 'Arma', kind: 'refino', area: 'arma' },
   { key: 'armadura', label: 'Peito', kind: 'refino', area: 'peito' },
   { key: 'escudo', label: 'Escudo', kind: 'refino', area: 'escudo' },
-  { key: 'anel', label: 'Anel', kind: 'tipo', area: 'anel' },
+  { key: 'anel', label: 'Colar', kind: 'tipo', area: 'anel' },
   { key: 'brinco', label: 'Brinco', kind: 'tipo', area: 'brinco' },
   { key: 'luvas', label: 'Luva', kind: 'refino', area: 'luvas' },
   { key: 'calca', label: 'Calça', kind: 'refino', area: 'calca' },
