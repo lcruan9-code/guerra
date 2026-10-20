@@ -1,5 +1,5 @@
-import GuerraApp from '@/components/GuerraApp';
+import LandingPage from '@/components/LandingPage';
 
 export default function Page() {
-  return <GuerraApp />;
+  return <LandingPage />;
 }
