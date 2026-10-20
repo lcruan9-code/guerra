@@ -23,10 +23,8 @@ export function isEventEnded(ev: EventRow, now: Date = new Date()): boolean {
 }
 
 // Geração lazy: garante que as guerras do dia ATIVO existem (na terça, Torre +
-// Kefra). Valem o dia inteiro e resetam na virada em SP. Idempotente e à prova
-// de concorrência via UNIQUE(dia, tipo) + ON CONFLICT DO NOTHING. Se TODAS as
-// guerras do dia estiverem canceladas, pula para o próximo dia com guerra.
-export async function ensureDayEvents(now: Date = new Date()): Promise<EventRow[]> {
+// Kefra). Valem o dia inteiro e resetam na virada em SP.
+export async function ensureDayEvents(now: Date = new Date(), guildId = 'g-imperium'): Promise<EventRow[]> {
   const [times, durs, byDow] = await Promise.all([getWarTimes(), getWarDurations(), getWarDowOverrides()]);
   let cursor = now;
   for (let guard = 0; guard < 12; guard++) {
@@ -34,18 +32,18 @@ export async function ensureDayEvents(now: Date = new Date()): Promise<EventRow[
     const out: EventRow[] = [];
     for (const w of wars) {
       let ev = await queryOne<EventRow>(
-        `SELECT ${SELECT_COLS} FROM events WHERE dia = $1 AND tipo = $2`,
-        [w.dia, w.tipo],
+        `SELECT ${SELECT_COLS} FROM events WHERE dia = $1 AND tipo = $2 AND (guild_id = $3 OR guild_id IS NULL)`,
+        [w.dia, w.tipo, guildId],
       );
       if (!ev) {
         await queryOne(
-          `INSERT INTO events (id, tipo, data, dia, fim) VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (dia, tipo) DO NOTHING`,
-          [newId(), w.tipo, w.dataUtc.toISOString(), w.dia, w.fimUtc.toISOString()],
+          `INSERT INTO events (id, guild_id, tipo, data, dia, fim) VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT DO NOTHING`,
+          [newId(), guildId, w.tipo, w.dataUtc.toISOString(), w.dia, w.fimUtc.toISOString()],
         );
         ev = await queryOne<EventRow>(
-          `SELECT ${SELECT_COLS} FROM events WHERE dia = $1 AND tipo = $2`,
-          [w.dia, w.tipo],
+          `SELECT ${SELECT_COLS} FROM events WHERE dia = $1 AND tipo = $2 AND (guild_id = $3 OR guild_id IS NULL)`,
+          [w.dia, w.tipo, guildId],
         );
       }
       if (ev && !ev.cancelado) out.push(ev);

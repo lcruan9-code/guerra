@@ -2,7 +2,7 @@ import { Pool, type QueryResultRow } from 'pg';
 
 let pool: Pool | undefined;
 
-function getPool(): Pool {
+export function getPool(): Pool {
   if (!pool) {
     const url = process.env.DATABASE_URL;
     if (!url) throw new Error('DATABASE_URL não definida.');

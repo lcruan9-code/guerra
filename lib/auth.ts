@@ -37,12 +37,12 @@ export async function getSession(): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     const id = String(payload.sub);
-    const row = await queryOne<{ nome: string; role: Role }>(
-      'SELECT nome, role FROM users WHERE id = $1',
+    const row = await queryOne<{ nome: string; role: Role; guild_id: string | null }>(
+      'SELECT nome, role, guild_id FROM users WHERE id = $1',
       [id],
     );
     if (!row) return null;
-    return { id, nome: row.nome, role: row.role };
+    return { id, nome: row.nome, role: row.role, guild_id: row.guild_id ?? undefined };
   } catch {
     return null;
   }

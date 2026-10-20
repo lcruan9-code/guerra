@@ -5,10 +5,8 @@ import { queryOne } from './db';
 import { HttpError, requireUser } from './auth';
 import type { SessionUser } from './types';
 
-const COOKIE = 'guerra_lider';
-const MAX_AGE = 60 * 60 * 3; // 3 horas — depois pede a senha de novo
-const KEY = 'lider_senha_hash';
 const DEFAULT_SENHA = 'wyd2026';
+const MAX_AGE = 60 * 60 * 3; // 3 horas — depois pede a senha de novo
 
 function secret(): Uint8Array {
   const s = process.env.JWT_SECRET;
@@ -16,13 +14,13 @@ function secret(): Uint8Array {
   return new TextEncoder().encode(s);
 }
 
-function makeHash(senha: string): string {
+export function makeHash(senha: string): string {
   const salt = randomBytes(16).toString('hex');
   const dk = scryptSync(senha, salt, 32).toString('hex');
   return `${salt}$${dk}`;
 }
 
-function checkHash(senha: string, stored: string): boolean {
+export function checkHash(senha: string, stored: string): boolean {
   const [salt, dk] = stored.split('$');
   if (!salt || !dk) return false;
   const calc = scryptSync(senha, salt, 32);
@@ -35,25 +33,34 @@ function fingerprint(stored: string): string {
   return createHash('sha256').update(stored).digest('hex').slice(0, 16);
 }
 
-async function getOrSeedHash(): Promise<string> {
-  const row = await queryOne<{ value: string }>('SELECT value FROM settings WHERE key = $1', [KEY]);
-  if (row) return row.value;
-  await queryOne(
-    `INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING`,
-    [KEY, makeHash(DEFAULT_SENHA)],
-  );
-  const seeded = await queryOne<{ value: string }>('SELECT value FROM settings WHERE key = $1', [KEY]);
-  return seeded!.value;
+function cookieName(guildId = 'default'): string {
+  return `guerra_lider_${guildId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
 }
 
-async function grant(hash: string): Promise<void> {
-  const token = await new SignJWT({ lv: fingerprint(hash) })
+async function getOrSeedHash(guildId?: string): Promise<string> {
+  const gid = guildId || 'g-imperium';
+  const row = await queryOne<{ leader_hash: string | null }>(
+    'SELECT leader_hash FROM guilds WHERE id = $1',
+    [gid],
+  );
+  if (row?.leader_hash) return row.leader_hash;
+
+  const defaultHash = makeHash(DEFAULT_SENHA);
+  await queryOne(
+    `UPDATE guilds SET leader_hash = $1 WHERE id = $2`,
+    [defaultHash, gid],
+  );
+  return defaultHash;
+}
+
+async function grant(hash: string, guildId = 'g-imperium'): Promise<void> {
+  const token = await new SignJWT({ lv: fingerprint(hash), gid: guildId })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE}s`)
     .sign(secret());
   const jar = await cookies();
-  jar.set(COOKIE, token, {
+  jar.set(cookieName(guildId), token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -62,44 +69,43 @@ async function grant(hash: string): Promise<void> {
   });
 }
 
-export async function unlockLeader(senha: string): Promise<void> {
-  const hash = await getOrSeedHash();
+export async function unlockLeader(senha: string, guildId = 'g-imperium'): Promise<void> {
+  const hash = await getOrSeedHash(guildId);
   if (!checkHash(senha ?? '', hash)) throw new HttpError(401, 'Senha do líder incorreta.');
-  await grant(hash);
+  await grant(hash, guildId);
 }
 
-export async function changeLeaderPassword(nova: string): Promise<void> {
+export async function changeLeaderPassword(nova: string, guildId = 'g-imperium'): Promise<void> {
   const s = (nova ?? '').trim();
   if (s.length < 4) throw new HttpError(400, 'A nova senha deve ter ao menos 4 caracteres.');
   const hash = makeHash(s);
   await queryOne(
-    `INSERT INTO settings (key, value) VALUES ($1, $2)
-     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-    [KEY, hash],
+    `UPDATE guilds SET leader_hash = $1 WHERE id = $2`,
+    [hash, guildId],
   );
-  await grant(hash); // mantém quem trocou; os demais cookies caem (fingerprint mudou)
+  await grant(hash, guildId);
 }
 
-export async function lockLeader(): Promise<void> {
+export async function lockLeader(guildId = 'g-imperium'): Promise<void> {
   const jar = await cookies();
-  jar.delete(COOKIE);
+  jar.delete(cookieName(guildId));
 }
 
-export async function hasLeaderAccess(): Promise<boolean> {
+export async function hasLeaderAccess(guildId = 'g-imperium'): Promise<boolean> {
   const jar = await cookies();
-  const token = jar.get(COOKIE)?.value;
+  const token = jar.get(cookieName(guildId))?.value;
   if (!token) return false;
   try {
     const { payload } = await jwtVerify(token, secret());
-    const hash = await getOrSeedHash();
-    return payload.lv === fingerprint(hash);
+    const hash = await getOrSeedHash(guildId);
+    return payload.lv === fingerprint(hash) && payload.gid === guildId;
   } catch {
     return false;
   }
 }
 
-export async function requireLeader(): Promise<SessionUser> {
+export async function requireLeader(guildId = 'g-imperium'): Promise<SessionUser> {
   const user = await requireUser();
-  if (!(await hasLeaderAccess())) throw new HttpError(403, 'LEADER_LOCKED');
+  if (!(await hasLeaderAccess(guildId))) throw new HttpError(403, 'LEADER_LOCKED');
   return user;
 }

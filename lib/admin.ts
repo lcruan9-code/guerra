@@ -368,14 +368,16 @@ export interface GearRankEntry {
 
 // Todos os personagens ordenados por gear score (maior primeiro). Para o líder
 // montar a composição da guerra.
-export async function gearRanking(): Promise<GearRankEntry[]> {
+export async function gearRanking(guildId = 'g-imperium'): Promise<GearRankEntry[]> {
   const rows = await query<{
     userNome: string; personagem: string; classe: string;
     especializacao: string; equipment: Equipment | null;
   }>(
     `SELECT u.nome AS "userNome", ch.nome AS personagem, ch.classe,
             ch.especializacao, ch.equipment
-     FROM characters ch JOIN users u ON u.id = ch.user_id`,
+     FROM characters ch JOIN users u ON u.id = ch.user_id
+     WHERE ch.guild_id = $1 OR ch.guild_id IS NULL`,
+    [guildId],
   );
   return rows
     .map((r) => ({
