@@ -17,12 +17,12 @@ const rajdhani = Rajdhani({
 });
 
 export const metadata: Metadata = {
-  title: 'Guerra — Presença da Guild',
-  description: 'Confirmação de presença nas guerras da guild (WYD)',
+  title: 'Guilds WYD — a plataforma da sua guilda',
+  description: 'Presença de guerra, montagem de SET e banco de contas para guildas do WYD',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'Imperium Guerra',
+    title: 'Guilds WYD',
     statusBarStyle: 'black-translucent',
   },
   icons: {

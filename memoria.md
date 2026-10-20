@@ -90,59 +90,109 @@ https://guilds-wyd.vercel.app/[guild_slug]
 
 ## 3. Próximos Passos (Guia Imediato de Continuação)
 
-A próxima IA ou desenvolvedor deve focar nos Passos 2 a 4 (o Passo 1 já está concluído):
+Os Passos 1 a 4 do plano original estão concluídos (20/10/2026). O que falta está em
+**"Pendências abertas"**, no fim desta seção.
 
-### ~~Passo 1: Finalizar os Route Handlers de Contas & Coletas~~ — ✅ CONCLUÍDO (20/10/2026)
+### ~~Passo 1: Route Handlers de Contas & Coletas~~ — ✅ CONCLUÍDO (20/10/2026)
 
 As 7 rotas foram criadas e estão listadas na seção 2.C acima. Padrão seguido em todas:
 `resolveTenantFromRequest(req)` → `requireLeader(guild.id)` (só nas do líder) → função de domínio → `toResponse(e)`.
-Validado com `npx tsc --noEmit` (0 erros) e `npm test` (43 testes, 8 arquivos).
 
-> **Pendência conhecida:** nenhuma das rotas de API do projeto tem teste automatizado
-> (as 5 anteriores também não tinham) — a suite cobre só lógica pura em `lib/`.
-> O fluxo de coleta ainda não foi exercitado contra o banco de verdade.
+### ~~Passo 2: Landing Page Comercial~~ — ✅ CONCLUÍDO (20/10/2026)
 
-### Passo 2: Construir a Landing Page Comercial (`app/page.tsx`)
-Substituir o `app/page.tsx` para ser a **Landing Page do SaaS**:
-- Apresentação da plataforma: "A ferramenta definitiva para sua Guilda no WYD".
-- Apresentar os 3 pilares visuais:
-  1. Presença Tática e Roster de Classes (Torre, Kefra, Noatum).
-  2. Grade de SET fiel ao jogo com cálculo de Gear Score (0 a 48).
-  3. Banco & Empréstimo Seguro de Contas (coletas criptografadas com trava de concorrência).
-- Cards com planos de assinatura (Mensal, Trimestral, Semestral, Vitalício).
-- Modal / Formulário: **"Já tenho uma Chave → Ativar Minha Guilda"**:
-  - Campo da chave (ex: `WYD-XXXX-YYYY-ZZZZ`).
-  - Nome da guilda e Slug da URL (`/[slug]`).
-  - Escolha do Reino (`RED` ou `BLUE`) e Servidor (`INFINITY` ou `ROGUE`).
-  - Ao concluir com sucesso, redireciona para `/[slug]`.
-- Botão "Acessar Guilda Existente" (campo de busca ou atalho direto).
+`app/page.tsx` → [`components/LandingPage.tsx`](file:///c:/PROJETOS/guerra/components/LandingPage.tsx).
+Hero, os 3 pilares, os 4 planos (Semestral marcado como "mais escolhido") e dois modais:
+**Ativar minha guilda** (chave → valida no blur via `/api/licenses/validate`, nome, slug gerado
+automático do nome, reino e servidor; ao ativar, redireciona para `/[slug]`) e
+**Acessar guilda existente** (digita o slug e entra).
 
-### Passo 3: Construir o Painel do SuperAdmin (`app/master/page.tsx`)
-- Tela acessada por senha mestre (`process.env.MASTER_KEY` ou padrão `wyd-saas-master-2026`).
-- Ações:
-  - Gerador de novas chaves de licença com seletor de plano (Mensal, Trimestral, etc.).
-  - Tabela com todas as chaves geradas, status (`DISPONIVEL`, `ATIVA`, `EXPIRADA`) e guilda vinculada.
-  - Tabela com todas as guildas cadastradas, reino, servidor, total de membros, total de personagens e data de expiração.
+### ~~Passo 3: Painel do SuperAdmin~~ — ✅ CONCLUÍDO (20/10/2026)
 
-### Passo 4: Estruturar as Páginas Dinâmicas por Guilda (`app/[guild]/...`)
-1. **`app/[guild]/layout.tsx`**:
-   - Resolve os dados da guilda via `await requireGuild(params.guild)`.
-   - Injeta o tema visual conforme o reino:
-     - `RED`: `--accent: #ff7a2e`, tons de fogo e brasas.
-     - `BLUE`: `--accent: #2e9fff`, tons de gelo e energia azul.
-   - Fornece navegação superior para: **Guerras**, **Montar SET**, **Coleta de Contas** e **Painel do Líder**.
-2. **`app/[guild]/page.tsx`**:
-   - Hub da guilda com o brasão/logo, reino, servidor e cards de atalho rápido para os membros.
-3. **`app/[guild]/guerra/page.tsx`**:
-   - Renderiza o `GuerraApp` adaptado para o escopo da guilda.
-4. **`app/[guild]/set/page.tsx`**:
-   - Visualização e edição do SET e Gear Score dos personagens do jogador.
-5. **`app/[guild]/coletar/page.tsx`**:
-   - Portal de empréstimo de contas da guilda (cópia rápida de credenciais, botões por Tier 1/2/3).
-6. **`app/[guild]/admin/page.tsx`**:
-   - Painel do líder da guilda com abas: Roster, Horários, KS, Prêmios, Força (Gear Ranking) e Contas/Coletas.
+`app/master/page.tsx` → [`components/MasterPanel.tsx`](file:///c:/PROJETOS/guerra/components/MasterPanel.tsx).
+Login pela Master Key (enviada como `Authorization: Bearer`, mantida **só em memória** — nunca em
+localStorage), gerador de chave por plano, tabela de licenças com botão de copiar e tabela de
+guildas com reino, servidor, membros, personagens e vencimento.
+
+### ~~Passo 4: Páginas Dinâmicas por Guilda~~ — ✅ CONCLUÍDO (20/10/2026)
+
+* `app/[guild]/layout.tsx`: resolve a guilda, devolve **404** se o slug não existe e uma tela de
+  aviso se a licença está inativa; aplica o tema do reino e monta a navegação
+  ([`components/GuildNav.tsx`](file:///c:/PROJETOS/guerra/components/GuildNav.tsx)).
+* `app/[guild]/page.tsx`: hub com brasão (ou as iniciais), reino, servidor e 4 cards de atalho.
+* `app/[guild]/guerra/page.tsx`: o `GuerraApp` de sempre.
+* `app/[guild]/set/page.tsx` → [`components/SetApp.tsx`](file:///c:/PROJETOS/guerra/components/SetApp.tsx):
+  lista os personagens com o Gear Score e abre o `EquipmentGrid`.
+* `app/[guild]/coletar/page.tsx` → [`components/ColetarApp.tsx`](file:///c:/PROJETOS/guerra/components/ColetarApp.tsx):
+  conta em posse com credenciais e botão de copiar, formulário (nome + servidor de origem),
+  filtro por servidor e contas agrupadas por Tier.
+* `app/[guild]/admin/page.tsx`: o `AdminPanel` de sempre.
+
+#### Como o tenant chega até a API (decisão de arquitetura)
+
+Os 14 componentes existentes chamam `api('/api/...')` com caminho sem o slug. Em vez de mexer em
+todos, foi criado [`middleware.ts`](file:///c:/PROJETOS/guerra/middleware.ts): em toda navegação
+para `/[slug]/...` ele grava o slug no cookie `wyd_guild`, que já era uma das fontes lidas por
+`resolveTenantFromRequest()`. Primeiros segmentos reservados (não viram guilda): `api`, `master`,
+`_next`, `favicon.ico`, `manifest.webmanifest`, `icons`.
+
+**Limitação conhecida:** o cookie é um só por navegador. Duas abas de guildas diferentes ao mesmo
+tempo → a última navegação vence. Se isso virar problema, o caminho é passar `?guild=` nas chamadas.
+
+#### Tema por reino
+
+`.guild-shell[data-reino="BLUE"]` troca `--accent`, `--accent2` e `--accent-bright` e pinta um
+`::before` fixo por cima do fundo laranja do `body`. As ~16 regras com laranja *hardcoded* em
+`globals.css` (glows e gradientes de botão) continuam quentes mesmo no reino BLUE — trocar isso
+exige refatorar o CSS para variáveis.
+
+#### PWA whitelabel
+
+A raiz `app/manifest.ts` virou o manifesto da **plataforma** (Guilds WYD). Cada guilda ganhou o
+seu em `app/[guild]/manifest.webmanifest/route.ts`: nome e `short_name` da guilda, `start_url` e
+`scope` no hub dela (`/[slug]`) e cor de fundo pelo reino. O `generateMetadata` do layout aponta
+para ele e usa o nome da guilda no `appleWebApp.title`. Os ícones ainda são os genéricos do
+projeto — usar `logo_url` como icone exigiria garantir tamanho/formato do PNG enviado.
+
+#### Rotas removidas
+
+`app/admin/page.tsx` saiu: o painel do líder agora é `/[slug]/admin`. A URL antiga `/admin` cai no
+404 de guilda inexistente.
 
 ---
+
+### Pendências abertas
+
+1. **Nenhuma rota de API tem teste automatizado.** A suite cobre só lógica pura em `lib/`.
+   O fluxo de coleta foi validado **à mão** no navegador (ver abaixo), não por teste.
+2. **`MASTER_KEY` e `CREDS_KEY` têm fallback literal no código**
+   (`'wyd-saas-master-2026'` e `'wyd-guilds-default-secret-key-32bytes'`). Sem a variável setada na
+   Vercel, qualquer um que leia este arquivo gera licença. Trocar por `throw` exige setar as duas
+   no painel antes do próximo deploy. **Atenção com o `CREDS_KEY`:** se ele mudar depois que
+   contas já foram cadastradas, as senhas gravadas não decifram mais.
+3. **A raiz `/` virou a landing comercial.** Os membros que usam `guilds-wyd.vercel.app` no celular
+   caem na página de vendas; o app deles agora é `/[slug]/guerra`. Precisa avisar a guilda (ou
+   redirecionar a raiz para a guilda quando o cookie `wyd_guild` existir).
+4. **Cookie de tenant não valida a guilda.** O middleware grava qualquer primeiro segmento no
+   cookie `wyd_guild` (ele roda no edge, sem banco). Slug inexistente cai no fallback `imperium`
+   do `resolveTenantFromRequest`.
+
+### O que já foi validado de ponta a ponta (20/10/2026)
+
+Schema aplicado no Neon com `npm run db:init`: a guilda `imperium` nasceu e o backfill associou a
+ela os 4 usuários, 4 personagens e 7 eventos que já existiam — nada perdido. Com uma conta de
+teste inserida à mão (e removida depois), no navegador:
+
+* `/imperium` → hub com brasão, reino e os 4 atalhos.
+* `/imperium/coletar` → pegar sem nome é barrado; com nome, a conta foi coletada, as credenciais
+  vieram **decifradas corretas** (prova do AES-256-GCM de ponta a ponta), a lista marcou
+  "com Ruan (teste)", e a devolução soltou a conta.
+* `coletas` registrou nome, servidor de origem e login, e fechou a linha com `data_entrega`
+  (`ativo = false`) na devolução.
+* `/imperium/guerra` → tela de login pelo nome do personagem.
+* `/naoexiste` → 404.
+* `/master` → tela da Master Key, sem ser capturada pela rota `[guild]`.
+* `/imperium/manifest.webmanifest` → manifesto com o nome da guilda e `start_url` no hub dela.
+
 
 ## 4. Como Executar e Validar
 
