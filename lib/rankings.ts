@@ -17,7 +17,12 @@ export interface AwardRow {
   ordem: number;
 }
 
-export async function rankBy(key: AwardKey, week: WeekRange, limit = 20): Promise<RankEntry[]> {
+export async function rankBy(
+  key: AwardKey,
+  week: WeekRange,
+  limit = 20,
+  guildId = 'g-imperium',
+): Promise<RankEntry[]> {
   // KS Torre (soma de KS nas Torres) e Kefra (KS na Noatum) — de confirmations.ks.
   if (key === 'KS_TORRE' || key === 'KEFRA') {
     const tipo = key === 'KS_TORRE' ? 'TORRE' : 'KEFRA';
@@ -27,11 +32,12 @@ export async function rankBy(key: AwardKey, week: WeekRange, limit = 20): Promis
        JOIN confirmations c ON c.user_id = u.id
        JOIN events e ON e.id = c.event_id
        WHERE e.tipo = $1 AND e.dia BETWEEN $2 AND $3 AND e.cancelado = false
+         AND e.guild_id = $5
        GROUP BY u.id, u.nome
        HAVING COALESCE(SUM(c.ks), 0) > 0
        ORDER BY valor DESC, u.nome ASC
        LIMIT $4`,
-      [tipo, week.inicio, week.fim, limit],
+      [tipo, week.inicio, week.fim, limit, guildId],
     );
   }
 
@@ -46,16 +52,20 @@ export async function rankBy(key: AwardKey, week: WeekRange, limit = 20): Promis
      JOIN confirmations c ON c.user_id = u.id
      JOIN events e ON e.id = c.event_id
      WHERE e.dia BETWEEN $1 AND $2 AND e.cancelado = false
+       AND e.guild_id = $4
      GROUP BY u.id, u.nome
      HAVING (${select}) > 0
      ORDER BY valor DESC, u.nome ASC
      LIMIT $3`,
-    [week.inicio, week.fim, limit],
+    [week.inicio, week.fim, limit, guildId],
   );
 }
 
-export async function listAwards(): Promise<AwardRow[]> {
-  return query<AwardRow>('SELECT key, label, ativo, premio, ordem FROM awards ORDER BY ordem');
+export async function listAwards(guildId = 'g-imperium'): Promise<AwardRow[]> {
+  return query<AwardRow>(
+    'SELECT key, label, ativo, premio, ordem FROM awards WHERE guild_id = $1 ORDER BY ordem',
+    [guildId],
+  );
 }
 
 export interface WeekMeta {
@@ -84,16 +94,20 @@ export interface PlayerRankingView {
   me: { pontos: number; posicao: number | null; total: number };
 }
 
-export async function getPlayerRankingView(userId: string, now: Date = new Date()): Promise<PlayerRankingView> {
+export async function getPlayerRankingView(
+  userId: string,
+  now: Date = new Date(),
+  guildId = 'g-imperium',
+): Promise<PlayerRankingView> {
   const week: WeekRange = await getWeekMeta(now);
-  const allAwards = await listAwards();
+  const allAwards = await listAwards(guildId);
   const active = allAwards.filter((a) => a.ativo);
 
   const withTops = await Promise.all(
-    active.map(async (a) => ({ ...a, top: await rankBy(a.key, week, 5) })),
+    active.map(async (a) => ({ ...a, top: await rankBy(a.key, week, 5, guildId) })),
   );
 
-  const pontosFull = await rankBy('PONTOS', week, 1000);
+  const pontosFull = await rankBy('PONTOS', week, 1000, guildId);
   const idx = pontosFull.findIndex((r) => r.userId === userId);
   const mine = idx >= 0 ? pontosFull[idx] : null;
 

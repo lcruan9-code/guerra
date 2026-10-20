@@ -145,19 +145,13 @@ export async function activateLicense(
 
   // Cria os 4 prêmios da semana padrão para essa nova guilda
   await query(
-    `INSERT INTO awards (id, guild_id, key, label, ordem) VALUES
-     ($1, $2, 'PONTOS', 'Pontuação da semana', 1),
-     ($3, $2, 'KS_TORRE', 'Top KS na Torre', 2),
-     ($4, $2, 'KEFRA', 'Top Kefra', 3),
-     ($5, $2, 'PARTICIPACAO', 'Presença nas guerras', 4)
-     ON CONFLICT DO NOTHING`,
-    [
-      `aw-${guildId}-1`,
-      guildId,
-      `aw-${guildId}-2`,
-      `aw-${guildId}-3`,
-      `aw-${guildId}-4`,
-    ],
+    `INSERT INTO awards (guild_id, key, label, ordem) VALUES
+     ($1, 'PONTOS', 'Pontuação da semana', 1),
+     ($1, 'KS_TORRE', 'Top KS na Torre', 2),
+     ($1, 'KEFRA', 'Top Kefra', 3),
+     ($1, 'PARTICIPACAO', 'Presença nas guerras', 4)
+     ON CONFLICT (guild_id, key) DO NOTHING`,
+    [guildId],
   );
 
   const updatedGuild: GuildDTO = {

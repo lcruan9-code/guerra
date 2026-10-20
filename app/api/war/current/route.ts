@@ -3,16 +3,18 @@ import { hasLeaderAccess } from '@/lib/leader-auth';
 import { ensureDayEvents, isEventEnded } from '@/lib/events';
 import { getMyConfirmation, getUserPoints } from '@/lib/war';
 import { listCharacters } from '@/lib/characters';
+import { resolveTenantFromRequest } from '@/lib/tenant';
 
-export async function GET(): Promise<Response> {
+export async function GET(req: Request): Promise<Response> {
   try {
     const user = await requireUser();
-    const events = await ensureDayEvents();
+    const guild = await resolveTenantFromRequest(req);
+    const events = await ensureDayEvents(new Date(), guild.id);
     const now = Date.now();
     const [characters, pontos, leaderUnlocked] = await Promise.all([
       listCharacters(user.id),
       getUserPoints(user.id),
-      hasLeaderAccess(),
+      hasLeaderAccess(guild.id),
     ]);
     const nowDate = new Date(now);
     const wars = await Promise.all(

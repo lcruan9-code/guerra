@@ -115,9 +115,9 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 CREATE TABLE IF NOT EXISTS awards (
-  id       TEXT PRIMARY KEY,
-  guild_id TEXT REFERENCES guilds(id) ON DELETE CASCADE,
+  guild_id TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
   key      TEXT NOT NULL,
+  PRIMARY KEY (guild_id, key),
   label    TEXT NOT NULL,
   ativo    BOOLEAN NOT NULL DEFAULT false,
   premio   TEXT NOT NULL DEFAULT '',
@@ -181,6 +181,23 @@ UPDATE characters SET guild_id = 'g-imperium' WHERE guild_id IS NULL;
 UPDATE events SET guild_id = 'g-imperium' WHERE guild_id IS NULL;
 UPDATE confirmations SET guild_id = 'g-imperium' WHERE guild_id IS NULL;
 UPDATE awards SET guild_id = 'g-imperium' WHERE guild_id IS NULL;
+
+-- A tabela awards nasceu monotenant com PRIMARY KEY (key), e o CREATE TABLE
+-- IF NOT EXISTS acima nunca a redefiniu. Com a chave assim, os 4 prêmios são
+-- globalmente únicos e a segunda guilda não consegue ter os seus. Reancora em
+-- (guild_id, key).
+ALTER TABLE awards ALTER COLUMN guild_id SET NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'awards'::regclass AND contype = 'p'
+      AND pg_get_constraintdef(oid) = 'PRIMARY KEY (key)'
+  ) THEN
+    ALTER TABLE awards DROP CONSTRAINT awards_pkey;
+    ALTER TABLE awards ADD CONSTRAINT awards_pkey PRIMARY KEY (guild_id, key);
+  END IF;
+END $$;
 
 -- ============================================================
 -- ÍNDICES DE PERFORMANCE MULTI-TENANT

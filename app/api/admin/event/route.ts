@@ -1,10 +1,12 @@
 import { toResponse } from '@/lib/auth';
 import { requireLeader } from '@/lib/leader-auth';
+import { resolveTenantFromRequest } from "@/lib/tenant";
 import { controlEvent } from '@/lib/admin';
 
 export async function POST(req: Request): Promise<Response> {
   try {
-    await requireLeader();
+    const guild = await resolveTenantFromRequest(req);
+    await requireLeader(guild.id);
     const body = (await req.json()) as { eventId?: string; action?: string; dataIso?: string };
     if (!body.eventId || !body.action) {
       return Response.json({ error: 'eventId e action são obrigatórios.' }, { status: 400 });

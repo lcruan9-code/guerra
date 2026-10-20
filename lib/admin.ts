@@ -83,11 +83,11 @@ export interface DayView {
   rows: DayRow[];
 }
 
-export async function getDayView(dia: string): Promise<DayView> {
+export async function getDayView(dia: string, guildId = 'g-imperium'): Promise<DayView> {
   const evs = await query<{ id: string; tipo: string }>(
-    `SELECT id, tipo FROM events WHERE dia = $1
+    `SELECT id, tipo FROM events WHERE dia = $1 AND guild_id = $2
      ORDER BY (CASE tipo WHEN 'TORRE' THEN 0 WHEN 'KEFRA' THEN 1 ELSE 2 END)`,
-    [dia],
+    [dia, guildId],
   );
   const wars: DayWarInfo[] = [];
   const byUser = new Map<string, DayRow>();
@@ -169,14 +169,14 @@ export interface AdminOverview {
   players: Array<{ userId: string; nome: string; role: string; pontos: number; presencas: number }>;
 }
 
-export async function getAdminOverview(): Promise<AdminOverview> {
+export async function getAdminOverview(guildId = 'g-imperium'): Promise<AdminOverview> {
   const [warTimes, warDurations, byDow, week, awards, dayEvents] = await Promise.all([
     getWarTimes(),
     getWarDurations(),
     getWarDowOverrides(),
     getWeekMeta(),
-    listAwards(),
-    ensureDayEvents(),
+    listAwards(guildId),
+    ensureDayEvents(new Date(), guildId),
   ]);
   const event = dayEvents[0];
   const { roster } = await getRosterView(event.id);
@@ -187,8 +187,10 @@ export async function getAdminOverview(): Promise<AdminOverview> {
             COUNT(*) FILTER (WHERE c.participou IS TRUE)::int AS presencas
      FROM users u
      LEFT JOIN confirmations c ON c.user_id = u.id
+     WHERE u.guild_id = $1
      GROUP BY u.id, u.nome, u.role
      ORDER BY pontos DESC, u.nome ASC`,
+    [guildId],
   );
   return {
     warTimes,
@@ -218,7 +220,7 @@ export interface EventListItem {
 }
 
 // Guerras recentes (para o líder navegar e lançar presença de guerras anteriores).
-export async function listRecentEvents(limit = 16): Promise<EventListItem[]> {
+export async function listRecentEvents(limit = 16, guildId = 'g-imperium'): Promise<EventListItem[]> {
   const rows = await query<{
     id: string;
     tipo: string;
@@ -233,10 +235,11 @@ export async function listRecentEvents(limit = 16): Promise<EventListItem[]> {
             COUNT(*) FILTER (WHERE c.participou IS TRUE)::int AS participou
      FROM events e
      LEFT JOIN confirmations c ON c.event_id = e.id
+     WHERE e.guild_id = $2
      GROUP BY e.id
      ORDER BY e.dia DESC
      LIMIT $1`,
-    [limit],
+    [limit, guildId],
   );
   return rows.map((r) => ({
     id: r.id,
@@ -301,10 +304,15 @@ export async function updateWeek(inicio?: string, fim?: string, texto?: string):
   if (texto !== undefined) await setSetting('premio_semana', texto);
 }
 
-export async function updateAward(key: string, ativo?: boolean, premio?: string): Promise<void> {
+export async function updateAward(
+  key: string,
+  ativo?: boolean,
+  premio?: string,
+  guildId = 'g-imperium',
+): Promise<void> {
   if (!AWARD_KEYS.includes(key as AwardKey)) throw new HttpError(400, 'Prêmio inválido.');
   const sets: string[] = [];
-  const params: unknown[] = [key];
+  const params: unknown[] = [key, guildId];
   if (ativo !== undefined) {
     params.push(ativo);
     sets.push(`ativo = $${params.length}`);
@@ -314,7 +322,7 @@ export async function updateAward(key: string, ativo?: boolean, premio?: string)
     sets.push(`premio = $${params.length}`);
   }
   if (sets.length === 0) return;
-  await queryOne(`UPDATE awards SET ${sets.join(', ')} WHERE key = $1`, params);
+  await queryOne(`UPDATE awards SET ${sets.join(', ')} WHERE key = $1 AND guild_id = $2`, params);
 }
 
 export async function controlEvent(eventId: string, action: string, dataIso?: string): Promise<void> {
