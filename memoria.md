@@ -2,7 +2,8 @@
 
 > **Arquivo de Continuidade Técnica para IA e Desenvolvedores**  
 > **Local do Projeto:** `c:\PROJETOS\guerra`  
-> **Domínio de Produção / Alvo:** `https://guilds-wyd.vercel.app`  
+> **Domínio de Produção (real, no ar):** `https://guerra-imperium.vercel.app`  
+> **Domínio pretendido (ainda NÃO existe — responde `DEPLOYMENT_NOT_FOUND`):** `https://guilds-wyd.vercel.app`  
 > **Última Atualização:** 20/10/2026
 
 ---
@@ -169,7 +170,12 @@ projeto — usar `logo_url` como icone exigiria garantir tamanho/formato do PNG 
    Vercel, qualquer um que leia este arquivo gera licença. Trocar por `throw` exige setar as duas
    no painel antes do próximo deploy. **Atenção com o `CREDS_KEY`:** se ele mudar depois que
    contas já foram cadastradas, as senhas gravadas não decifram mais.
-3. **A raiz `/` virou a landing comercial.** Os membros que usam `guilds-wyd.vercel.app` no celular
+   **Hoje as duas não existem em lugar nenhum:** o `.env.local` tem só `DATABASE_URL`, `JWT_SECRET`,
+   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `APP_URL`. Logo, local e produção caem no fallback
+   e a cifragem usa o `JWT_SECRET`. Como **local e produção compartilham o mesmo banco Neon**, a
+   chave tem de ser idêntica nos dois — se o `JWT_SECRET` da Vercel não for o mesmo do local, conta
+   cadastrada de um lado não decifra do outro.
+3. **A raiz `/` virou a landing comercial.** Os membros que usam `guerra-imperium.vercel.app` no celular
    caem na página de vendas; o app deles agora é `/[slug]/guerra`. Precisa avisar a guilda (ou
    redirecionar a raiz para a guilda quando o cookie `wyd_guild` existir).
 4. **Cookie de tenant não valida a guilda.** O middleware grava qualquer primeiro segmento no
@@ -191,6 +197,9 @@ teste inserida à mão (e removida depois), no navegador:
 * `/imperium/guerra` → tela de login pelo nome do personagem.
 * `/naoexiste` → 404.
 * `/master` → tela da Master Key, sem ser capturada pela rota `[guild]`.
+
+Em **produção** (após o push de 20/10): a landing responde na raiz, `/imperium` monta o hub e
+`/imperium/guerra` responde 200.
 * `/imperium/manifest.webmanifest` → manifesto com o nome da guilda e `start_url` no hub dela.
 
 
