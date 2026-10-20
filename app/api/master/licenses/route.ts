@@ -1,12 +1,19 @@
+import { timingSafeEqual } from 'crypto';
 import { generateLicenseKey, listLicenses } from '@/lib/licenses';
 import { listAllGuilds } from '@/lib/tenant';
 import { toResponse, HttpError } from '@/lib/auth';
 import type { LicensePlan } from '@/lib/types';
 
 function checkMasterAuth(req: Request) {
-  const masterKey = process.env.MASTER_KEY || 'wyd-saas-master-2026';
-  const authHeader = req.headers.get('authorization')?.replace('Bearer ', '');
-  if (authHeader !== masterKey) {
+  // Sem fallback literal: a chave estaria em arquivo público num site já no ar.
+  const masterKey = process.env.MASTER_KEY;
+  if (!masterKey) {
+    throw new HttpError(503, 'MASTER_KEY não configurada no servidor. Painel Master indisponível.');
+  }
+  const sent = req.headers.get('authorization')?.replace('Bearer ', '') ?? '';
+  const a = Buffer.from(sent);
+  const b = Buffer.from(masterKey);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
     throw new HttpError(401, 'Acesso restrito ao Administrador Geral (Master Key inválida).');
   }
 }

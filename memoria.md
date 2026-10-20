@@ -163,18 +163,20 @@ projeto — usar `logo_url` como icone exigiria garantir tamanho/formato do PNG 
 
 ### Pendências abertas
 
-1. **Nenhuma rota de API tem teste automatizado.** A suite cobre só lógica pura em `lib/`.
-   O fluxo de coleta foi validado **à mão** no navegador (ver abaixo), não por teste.
-2. **`MASTER_KEY` e `CREDS_KEY` têm fallback literal no código**
-   (`'wyd-saas-master-2026'` e `'wyd-guilds-default-secret-key-32bytes'`). Sem a variável setada na
-   Vercel, qualquer um que leia este arquivo gera licença. Trocar por `throw` exige setar as duas
-   no painel antes do próximo deploy. **Atenção com o `CREDS_KEY`:** se ele mudar depois que
-   contas já foram cadastradas, as senhas gravadas não decifram mais.
-   **Hoje as duas não existem em lugar nenhum:** o `.env.local` tem só `DATABASE_URL`, `JWT_SECRET`,
-   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `APP_URL`. Logo, local e produção caem no fallback
-   e a cifragem usa o `JWT_SECRET`. Como **local e produção compartilham o mesmo banco Neon**, a
-   chave tem de ser idêntica nos dois — se o `JWT_SECRET` da Vercel não for o mesmo do local, conta
-   cadastrada de um lado não decifra do outro.
+1. **Nenhuma rota de API tem teste automatizado.** A suite cobre só lógica pura em `lib/`
+   (inclusive `lib/crypto.ts` desde 20/10/2026). O fluxo de coleta foi validado **à mão**
+   no navegador (ver abaixo), não por teste.
+2. **`MASTER_KEY` e `CREDS_KEY` precisam ser setadas na Vercel.** Os fallbacks literais
+   (`'wyd-saas-master-2026'` e `'wyd-guilds-default-secret-key-32bytes'`) foram **removidos**
+   em 20/10/2026: sem `MASTER_KEY` o `/api/master/licenses` responde `503` e o painel Master
+   fica indisponível; sem `CREDS_KEY` **nem** `JWT_SECRET` o `lib/crypto.ts` lança em vez de
+   cifrar. O fallback para `JWT_SECRET` continua (com `console.warn`), então a produção atual
+   não quebra — mas é justamente ele que deixa local e produção divergirem.
+   **Nenhuma das duas existe ainda:** o `.env.local` tem só `DATABASE_URL`, `JWT_SECRET`,
+   `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `APP_URL`. Como **local e produção compartilham
+   o mesmo banco Neon**, a `CREDS_KEY` tem de ser idêntica nos dois — conta cadastrada com uma
+   chave não decifra com outra. **Janela boa:** a tabela `accounts` está vazia, então definir
+   agora não quebra nada; depois do primeiro cadastro, trocar a chave exige re-cifrar.
 3. **A raiz `/` virou a landing comercial.** Os membros que usam `guerra-imperium.vercel.app` no celular
    caem na página de vendas; o app deles agora é `/[slug]/guerra`. Precisa avisar a guilda (ou
    redirecionar a raiz para a guilda quando o cookie `wyd_guild` existir).
@@ -235,7 +237,8 @@ JWT_SECRET=super-secreto-jwt-min-32-chars
 CREDS_KEY=segredo-aes-gcm-para-contas-wyd
 
 # Chave mestra do SuperAdmin para gerar licenças em /master
-MASTER_KEY=wyd-saas-master-2026
+# Sem ela o painel Master responde 503. Gerar com: openssl rand -hex 32
+MASTER_KEY=gerar-com-openssl-rand-hex-32
 ```
 
 ---
